@@ -64,6 +64,21 @@ namespace gem5
 namespace RiscvISA
 {
 
+template<typename Type> struct double_width;
+template<> struct double_width<uint8_t>     { using type = uint16_t;};
+template<> struct double_width<uint16_t>    { using type = uint32_t;};
+template<> struct double_width<uint32_t>    { using type = uint64_t;};
+template<> struct double_width<uint64_t>    { using type = __uint128_t;};
+template<> struct double_width<int8_t>      { using type = int16_t; };
+template<> struct double_width<int16_t>     { using type = int32_t; };
+template<> struct double_width<int32_t>     { using type = int64_t; };
+template<> struct double_width<int64_t>     { using type = __int128_t; };
+template<> struct double_width<float32_t>   { using type = float64_t;};
+
+template<typename Type> struct double_widthf;
+template<> struct double_widthf<uint32_t>    { using type = float64_t;};
+template<> struct double_widthf<int32_t>     { using type = float64_t;};
+
 template<typename T> inline bool
 isquietnan(T val)
 {
@@ -143,6 +158,69 @@ registerName(RegId reg)
          */
         return int_reg::RegNames[reg.index()];
     }
+}
+
+template <typename T> inline std::make_unsigned_t<T>
+mulhu(std::make_unsigned_t<T> rs1, std::make_unsigned_t<T> rs2)
+{
+    using WideT = typename double_width<std::make_unsigned_t<T>>::type;
+    return ((WideT)rs1 * rs2) >> (sizeof(T) * 8);
+}
+
+template <typename T> inline std::make_signed_t<T>
+mulh(std::make_signed_t<T> rs1, std::make_signed_t<T> rs2)
+{
+    using WideT = typename double_width<std::make_signed_t<T>>::type;
+    return ((WideT)rs1 * rs2) >> (sizeof(T) * 8);
+}
+
+template <typename T> inline std::make_signed_t<T>
+mulhsu(std::make_signed_t<T> rs1, std::make_unsigned_t<T> rs2)
+{
+    using WideT = typename double_width<std::make_signed_t<T>>::type;
+    return ((WideT)rs1 * rs2) >> (sizeof(T) * 8);
+}
+
+template<typename T> inline T
+div(T rs1, T rs2)
+{
+    constexpr T kRsMin = std::numeric_limits<T>::min();
+    if (rs2 == 0) {
+        return -1;
+    } else if (rs1 == kRsMin && rs2 == -1) {
+        return kRsMin;
+    } else {
+        return rs1 / rs2;
+    }
+}
+
+template<typename T> inline T
+divu(T rs1, T rs2)
+{
+    if (rs2 == 0) {
+        return std::numeric_limits<T>::max();
+    } else {
+        return rs1 / rs2;
+    }
+}
+
+template<typename T> inline T
+rem(T rs1, T rs2)
+{
+    constexpr T kRsMin = std::numeric_limits<T>::min();
+    if (rs2 == 0) {
+        return rs1;
+    } else if (rs1 == kRsMin && rs2 == -1) {
+        return 0;
+    } else {
+        return rs1 % rs2;
+    }
+}
+
+template<typename T> inline T
+remu(T rs1, T rs2)
+{
+    return (rs2 == 0) ? rs1 : rs1 % rs2;
 }
 
 // Vector extension functions
@@ -284,53 +362,6 @@ elem_mask(const T* vs, const int index)
     int pos = index % (sizeof(T)*8);
     return (vs[idx] >> pos) & 1;
 }
-
-inline uint64_t
-mulhu(uint64_t a, uint64_t b)
-{
-    uint64_t a_lo = (uint32_t)a;
-    uint64_t a_hi = a >> 32;
-    uint64_t b_lo = (uint32_t)b;
-    uint64_t b_hi = b >> 32;
-
-    uint64_t hi = a_hi * b_hi;
-    uint64_t mid1 = a_hi * b_lo;
-    uint64_t mid2 = a_lo * b_hi;
-    uint64_t lo = a_lo * b_lo;
-    uint64_t carry = ((uint64_t)(uint32_t)mid1
-            + (uint64_t)(uint32_t)mid2 + (lo >> 32)) >> 32;
-
-    return hi + (mid1 >> 32) + (mid2 >> 32) + carry;
-}
-
-inline int64_t
-mulh(int64_t a, int64_t b)
-{
-    int negate = (a < 0) != (b < 0);
-    uint64_t res = mulhu(a < 0 ? -a : a, b < 0 ? -b : b);
-    return negate ? ~res + (a * b == 0) : res;
-}
-
-inline int64_t
-mulhsu(int64_t a, uint64_t b)
-{
-    bool negate = a < 0;
-    uint64_t res = mulhu(a < 0 ? -a : a, b);
-    return negate ? ~res + (a * b == 0) : res;
-}
-
-template<typename Type> struct double_width;
-template<> struct double_width<uint8_t>     { using type = uint16_t;};
-template<> struct double_width<uint16_t>    { using type = uint32_t;};
-template<> struct double_width<uint32_t>    { using type = uint64_t;};
-template<> struct double_width<int8_t>      { using type = int16_t; };
-template<> struct double_width<int16_t>     { using type = int32_t; };
-template<> struct double_width<int32_t>     { using type = int64_t; };
-template<> struct double_width<float32_t>   { using type = float64_t;};
-
-template<typename Type> struct double_widthf;
-template<> struct double_widthf<uint32_t>    { using type = float64_t;};
-template<> struct double_widthf<int32_t>     { using type = float64_t;};
 
 template<typename FloatType, typename IntType = decltype(FloatType::v)> auto
 ftype(IntType a) -> FloatType
