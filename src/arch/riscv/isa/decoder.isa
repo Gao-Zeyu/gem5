@@ -148,9 +148,24 @@ decode QUADRANT default Unknown::unknown() {
             }}, ea_code={{
                 EA = Rp1 + offset;
             }});
-            0x7: c_sd({{
-                offset = CIMM3 << 3 | CIMM2 << 6;
-            }}, {{
+            0x7: decode RVTYPE {
+                0x0: c_fsw({{
+                    offset = CIMM2<1:1> << 2 |
+                             CIMM3 << 3 |
+                             CIMM2<0:0> << 6;
+                }}, {{
+                    STATUS status = xc->readMiscReg(MISCREG_STATUS);
+                    if (status.fs == FPUStatus::OFF)
+                        return std::make_shared<IllegalInstFault>("FPU is off",
+                                                                   machInst);
+
+                    Mem_uw = unboxF32(boxF32(Fp2_bits));
+                }}, {{
+                    EA = (uint32_t)(Rp1_uw + offset);
+                }});
+                0x1: c_sd({{
+                    offset = CIMM3 << 3 | CIMM2 << 6;
+                }}, {{
                     Mem_ud = Rp2_ud;
             }}, {{
                 EA = Rp1 + offset;
