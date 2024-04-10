@@ -404,6 +404,40 @@ decode QUADRANT default Unknown::unknown() {
             }}, {{
                 EA = sp + offset;
             }});
+            0x3: decode RVTYPE {
+                0x0: c_flwsp({{
+                    offset = CIMM5<4:2> << 2 |
+                             CIMM1 << 5 |
+                             CIMM5<1:0> << 6;
+                }}, {{
+                    STATUS status = xc->readMiscReg(MISCREG_STATUS);
+                    if (status.fs == FPUStatus::OFF)
+                        return std::make_shared<IllegalInstFault>("FPU is off",
+                                                                   machInst);
+
+                    status.fs = FPUStatus::DIRTY;
+                    xc->setMiscReg(MISCREG_STATUS, status);
+
+                    freg_t fd;
+                    fd = freg(f32(Mem_uw));
+                    Fc1_bits = fd.v;
+                }}, {{
+                    EA = (uint32_t)(sp_uw + offset);
+                }});
+                0x1: c_ldsp({{
+                    offset = CIMM5<4:3> << 3 |
+                             CIMM1 << 5 |
+                             CIMM5<2:0> << 6;
+                }}, {{
+                    if (RC1 == 0) {
+                        return std::make_shared<IllegalInstFault>(
+                                "source reg x0", machInst);
+                    }
+                    Rc1_sd = Mem_sd;
+                }}, {{
+                    EA = sp + offset;
+                }});
+            }
         }
         0x4: decode CFUNCT1 {
             0x0: decode RC2 {
