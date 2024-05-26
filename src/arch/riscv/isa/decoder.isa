@@ -441,12 +441,12 @@ decode QUADRANT default Unknown::unknown() {
         }
         0x4: decode CFUNCT1 {
             0x0: decode RC2 {
-                0x0: Jump::c_jr({{
+                0x0: CJump::c_jr({{
                     if (RC1 == 0) {
                         return std::make_shared<IllegalInstFault>(
                                 "source reg x0", machInst);
                     }
-                    NPC = Rc1;
+                    NPC = rvZext(Rc1 & (~0x1));
                 }}, IsIndirectControl, IsUncondControl);
                 default: CROp::c_mv({{
                     if (RC1 == 0) {
@@ -456,22 +456,17 @@ decode QUADRANT default Unknown::unknown() {
                     Rc1 = Rc2;
                 }},IsMov);
             }
-            0x1: decode RC1 {
-                0x0: SystemOp::c_ebreak({{
-                    if (RC2 != 0) {
-                        return std::make_shared<IllegalInstFault>(
-                                "source reg x1", machInst);
-                    }
-                    return std::make_shared<BreakpointFault>(xc->pcState());
-                }}, IsSerializeAfter, IsNonSpeculative, No_OpClass);
-                default: decode RC2 {
-                    0x0: Jump::c_jalr({{
-                        if (RC1 == 0) {
-                            return std::make_shared<IllegalInstFault>(
-                                    "source reg x0", machInst);
-                        }
-                        ra = NPC;
-                        NPC = Rc1;
+            0x1: decode RC2 {
+                0x0: decode RC1 {
+                    0x0: SystemOp::c_ebreak({{
+                        // NB: Semihosting spec requires uncompressed ebreak,
+                        // so this instruction does not check for semihosting.
+                        return std::make_shared<BreakpointFault>(
+                            xc->pcState());
+                    }}, IsSerializeAfter, IsNonSpeculative, No_OpClass);
+                    default: CJump::c_jalr({{
+                        ra = rvSext(NPC);
+                        NPC = rvZext(Rc1 & (~0x1));
                     }}, IsIndirectControl, IsUncondControl, IsCall);
                     default: CompressedROp::c_add({{
                         Rc1_sd = Rc1_sd + Rc2_sd;
