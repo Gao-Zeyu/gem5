@@ -881,7 +881,7 @@ class UFTB(DefaultFTB):
     tagBits = 38
     numWays = 32
     numDelay = 0
-    aheadPipelined = 0
+
 class RAS(TimedBaseFTBPredictor):
     type = 'RAS'
     cxx_class = 'gem5::branch_prediction::ftb_pred::RAS'

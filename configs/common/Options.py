@@ -275,6 +275,8 @@ def addCommonOptions(parser, configure_xiangshan=False):
                         help="enable loop predictor (only for ftb branch predictor)")
     parser.add_argument("--enable-jump-ahead-predictor", default=False, action="store_true",
                         help="enable jump ahead predictor (only for ftb branch predictor)")
+    parser.add_argument("--enable-bp-two-taken", default=False, action="store_true",
+                        help="enable two predict per cycle")
 
     parser.add_argument("--list-rp-types",
                         action=ListRP, nargs=0,

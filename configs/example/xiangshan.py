@@ -79,7 +79,8 @@ def build_test_system(np):
                                             bpDBSwitches=bp_db_switches,
                                             enableLoopBuffer=args.enable_loop_buffer,
                                             enableLoopPredictor=args.enable_loop_predictor,
-                                            enableJumpAheadPredictor=args.enable_jump_ahead_predictor
+                                            enableJumpAheadPredictor=args.enable_jump_ahead_predictor,
+                                            enableTwoTaken=args.enable_bp_two_taken
                                             )
             test_sys.cpu[i].branchPred.isDumpMisspredPC = True
         else:
