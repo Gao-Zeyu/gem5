@@ -110,7 +110,7 @@ class BaseO3CPU(BaseCPU):
     commitToFetchDelay = Param.Cycles(3, "Commit to fetch delay")
     fetchWidth = Param.Unsigned(16, "Fetch width")
     fetchBufferSize = Param.Unsigned(64, "Fetch buffer size in bytes")
-    fetchQueueSize = Param.Unsigned(48, "Fetch queue size in micro-ops "
+    fetchQueueSize = Param.Unsigned(64, "Fetch queue size in micro-ops "
                                     "per-thread")
 
     renameToDecodeDelay = Param.Cycles(1, "Rename to decode delay")
@@ -118,13 +118,13 @@ class BaseO3CPU(BaseCPU):
                                     "delay")
     commitToDecodeDelay = Param.Cycles(1, "Commit to decode delay")
     fetchToDecodeDelay = Param.Cycles(4, "Fetch to decode delay")
-    decodeWidth = Param.Unsigned(6, "Decode width")
+    decodeWidth = Param.Unsigned(8, "Decode width")
 
     iewToRenameDelay = Param.Cycles(1, "Issue/Execute/Writeback to rename "
                                     "delay")
     commitToRenameDelay = Param.Cycles(1, "Commit to rename delay")
     decodeToRenameDelay = Param.Cycles(1, "Decode to rename delay")
-    renameWidth = Param.Unsigned(6, "Rename width")
+    renameWidth = Param.Unsigned(8, "Rename width")
 
     commitToIEWDelay = Param.Cycles(1, "Commit to "
                "Issue/Execute/Writeback delay")
@@ -179,7 +179,7 @@ class BaseO3CPU(BaseCPU):
 
     numRobs = Param.Unsigned(1, "Number of Reorder Buffers");
 
-    numPhysIntRegs = Param.Unsigned(224,
+    numPhysIntRegs = Param.Unsigned(264,
             "Number of physical integer registers")
     numPhysFloatRegs = Param.Unsigned(192, "Number of physical floating point "
                                       "registers")
