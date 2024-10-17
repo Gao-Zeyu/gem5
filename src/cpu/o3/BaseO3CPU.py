@@ -140,10 +140,10 @@ class BaseO3CPU(BaseCPU):
     iewToCommitDelay = Param.Cycles(1, "Issue/Execute/Writeback to commit "
                "delay")
     renameToROBDelay = Param.Cycles(1, "Rename to reorder buffer delay")
-    commitWidth = Param.Unsigned(8, "Commit width")
+    commitWidth = Param.Unsigned(12, "Commit width")
 
-    squashWidth = Param.Unsigned(8, "Squash width with rollback rob walk")
-    replayWidth = Param.Unsigned(8, "Squash width with redo rob walk")
+    squashWidth = Param.Unsigned(12, "Squash width with rollback rob walk")
+    replayWidth = Param.Unsigned(12, "Squash width with redo rob walk")
     ConstSquashCycle = Param.Unsigned(1, "Squash width with redo rob walk")
     robWalkPolicy = Param.ROBWalkPolicy('Replay', "Squash with a specific policy")
 
@@ -155,8 +155,8 @@ class BaseO3CPU(BaseCPU):
     forwardComSize = Param.Unsigned(10,
             "Time buffer size for forward communication")
 
-    LQEntries = Param.Unsigned(80, "Number of load queue entries")
-    SQEntries = Param.Unsigned(64, "Number of store queue entries")
+    LQEntries = Param.Unsigned(128, "Number of load queue entries")
+    SQEntries = Param.Unsigned(96, "Number of store queue entries")
 
     SbufferEntries = Param.Unsigned(16, "Number of store buffer entries")
     SbufferEvictThreshold = Param.Unsigned(7, "store buffer eviction threshold")
