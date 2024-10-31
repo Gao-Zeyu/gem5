@@ -1165,6 +1165,10 @@ LSQ::SbufferRequest::addReq(Addr blockVaddr, Addr blockPaddr, const std::vector<
     req->setByteEnable(byteEnable);
 
     _reqs.push_back(req);
+
+    req->setAMOType(AMOType::STORE);
+    req->setCPU(_port.getCPUPtr());
+    // req->setCPUId(_port.getCPUPtr()->cpuId());
 }
 
 LSQ::LSQRequest::LSQRequest(
@@ -1256,7 +1260,8 @@ LSQ::LSQRequest::addReq(Addr addr, unsigned size,
 
         int amo_type = _inst->isAtomic() ? 20 : 0;
         req->setAMOType(amo_type);
-        req->setCPUId(_port.getCPUPtr()->cpuId());
+        req->setCPU(_port.getCPUPtr());
+        // req->setCPUId(_port.getCPUPtr()->cpuId());
 
         _reqs.push_back(req);
     }
