@@ -906,6 +906,7 @@ class FTBTAGE(TimedBaseFTBPredictor):
     cxx_class = 'gem5::branch_prediction::ftb_pred::FTBTAGE'
     cxx_header = "cpu/pred/ftb/ftb_tage.hh"
 
+    enableSC = Param.Bool(True, "Enable SC or not")
     numPredictors = Param.Unsigned(4, "Number of TAGE predictors")
     tableSizes = VectorParam.Unsigned([2048]*4, "the ITTAGE T0~Tn length")
     TTagBitSizes = VectorParam.Unsigned([8]*4, "the T0~Tn entry's tag bit size")

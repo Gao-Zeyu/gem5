@@ -27,6 +27,7 @@ FTBTAGE::FTBTAGE(const Params& p)
       maxHistLen(p.maxHistLen),
       numTablesToAlloc(p.numTablesToAlloc),
       numBr(p.numBr),
+      enableSC(p.enableSC),
       sc(p.numBr, this)
 {
     tageBankStats = new TageBankStats * [numBr];
@@ -76,7 +77,6 @@ FTBTAGE::FTBTAGE(const Params& p)
         useAlt[i].resize(numBr, 0);
     }
     
-    enableSC = true;
     std::vector<TageBankStats *> statsPtr;
     for (int i = 0; i < numBr; i++) {
         statsPtr.push_back(tageBankStats[i]);
@@ -499,11 +499,18 @@ FTBTAGE::update(const FetchStream &entry)
         }
         if (enableDB) {
             TageMissTrace t;
-            t.set(startAddr, ftb_entry.slots[b].pc, b, phyBrIdx, mainFound, pred.mainCounter,
-                pred.mainUseful, pred.altCounter, pred.table, pred.index, getBaseTableIndex(startAddr),
-                pred.tag, pred.useAlt, pred.taken, this_cond_actually_taken, allocSuccess, allocFailure,
-                scMeta.scPreds[b].scUsed, scMeta.scPreds[b].scPred != scMeta.scPreds[b].tageTaken,
-                scMeta.scPreds[b].scPred == this_cond_actually_taken);
+            if (enableSC) {
+                t.set(startAddr, ftb_entry.slots[b].pc, b, phyBrIdx, mainFound, pred.mainCounter,
+                    pred.mainUseful, pred.altCounter, pred.table, pred.index, getBaseTableIndex(startAddr),
+                    pred.tag, pred.useAlt, pred.taken, this_cond_actually_taken, allocSuccess, allocFailure,
+                    scMeta.scPreds[b].scUsed, scMeta.scPreds[b].scPred != scMeta.scPreds[b].tageTaken,
+                    scMeta.scPreds[b].scPred == this_cond_actually_taken);
+            } else {
+                t.set(startAddr, ftb_entry.slots[b].pc, b, phyBrIdx, mainFound, pred.mainCounter,
+                    pred.mainUseful, pred.altCounter, pred.table, pred.index, getBaseTableIndex(startAddr),
+                    pred.tag, pred.useAlt, pred.taken, this_cond_actually_taken, allocSuccess, allocFailure,
+                    0, 0, 0);
+            }
             tageMissTrace->write_record(t);
         }
     }
