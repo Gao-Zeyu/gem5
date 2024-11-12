@@ -988,6 +988,18 @@ LSQUnit::triggerStorePFTrain(int sq_idx)
     return true;
 }
 
+void
+LSQUnit::triggerPrefetchUnique(Addr paddr) {
+    RequestPtr req = std::make_shared<Request>(paddr, 1, Request::PREFETCH_UNIQUE, cpu->dataRequestorId());
+    req->setPaddr(paddr);
+    req->setByteEnable(std::vector<bool>(1, false));
+    PacketPtr pkt = Packet::createPrefetchUnique(req);
+    // pkt->dataStatic(std::make_shared<uint8_t>(0));
+    bool success = dcachePort->sendTimingReq(pkt);
+    assert(success); // must be true
+
+}
+
 Fault
 LSQUnit::executeStore(const DynInstPtr &store_inst)
 {

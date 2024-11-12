@@ -960,6 +960,8 @@ class LSQ
 
     RequestPort &getDataPort() { return dcachePort; }
 
+    void triggerPrefetchUnique(Addr paddr);
+
   protected:
     /** D-cache is blocked */
     bool _cacheBlocked;

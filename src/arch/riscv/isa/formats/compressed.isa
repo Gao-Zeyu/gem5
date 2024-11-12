@@ -88,6 +88,8 @@ def format CBOp(code, *opt_flags) {{
                       CIMM5<4:3> << 6;
                 if (CIMM3<2:2> > 0)
                     imm |= ~((int64_t)0xFF);
+                if (CIMM3<2:2> > 0)
+                    flags[IsBackwardBranch] = true;
                """
     regs = 'srcRegIdx(0)'
     iop = InstObjParams(name, Name, 'ImmOp<int64_t>',

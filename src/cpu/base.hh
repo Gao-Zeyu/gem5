@@ -55,6 +55,7 @@
 #else
 #include "arch/generic/interrupts.hh"
 #include "base/statistics.hh"
+#include "cpu/amo_pred.hh"
 #include "cpu/amo_recorder.hh"
 #include "cpu/difftest.hh"
 #include "debug/Mwait.hh"
@@ -817,8 +818,12 @@ class BaseCPU : public ClockedObject
   private:
     AMORecorder *amoRecorder;
     bool hasAMORecorder;
+    AMOPred *amoPred;
+    bool m_hasAMOPred;
   public:
     AMORecorder *getAMORecorder() { return amoRecorder; }
+    AMOPred *getAMOPred() { return amoPred; }
+    bool hasAMOPred() { return m_hasAMOPred; }
 };
 
 } // namespace gem5

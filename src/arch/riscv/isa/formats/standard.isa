@@ -483,6 +483,8 @@ def format BOp(code, *opt_flags) {{
                       BIMM12BIT11 << 11    |
                       IMMSIGN << 12;
                 imm = sext<13>(imm);
+                if (IMMSIGN > 0)
+                    flags[IsBackwardBranch] = true;
                """
     regs = ['srcRegIdx(0)','srcRegIdx(1)']
     iop = InstObjParams(name, Name, 'ImmOp<int64_t>',

@@ -166,7 +166,8 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
       enabledifftesInstTrace(p.enable_difftest_inst_trace),
       noHypeMode(false),
       enableMemDedup(p.enable_mem_dedup),
-      hasAMORecorder(p.has_amo_recorder)
+      hasAMORecorder(p.has_amo_recorder),
+      m_hasAMOPred(p.has_amo_pred)
 {
     // if Python did not provide a valid ID, do it here
     if (_cpuId == -1 ) {
@@ -258,6 +259,11 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
         registerExitCallback([this]() {
             amoRecorder->dump();
         });
+    }
+
+    if (m_hasAMOPred) {
+        amoPred = new AMOPred("amo_predictor" + std::to_string(_cpuId),
+            p.amo_pred_size);
     }
 }
 

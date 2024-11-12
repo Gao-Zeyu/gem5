@@ -837,10 +837,10 @@ Sequencer::hitCallback(SequencerRequest* srequest, DataBlock& data,
                          getOffset(request_address), pkt->getSize());
             DPRINTF(RubySequencer, "swap data %s\n", data);
             AMORecorder *amo_recorder = pkt->req->getCPU()->getAMORecorder();
-            bool changed = memcmp(pkt->getPtr<uint8_t>(),
-                data.getData(getOffset(request_address), pkt->getSize()), pkt->getSize());
-            warn("Value changed for swap addr %#lx? %d\n", pkt->getAddr(), changed);
-            amo_recorder->recordChanged(request_address, changed);
+            // bool changed = memcmp(pkt->getPtr<uint8_t>(),
+            //     data.getData(getOffset(request_address), pkt->getSize()), pkt->getSize());
+            // warn("Value changed for swap addr %#lx? %d\n", pkt->getAddr(), changed);
+            // amo_recorder->recordChanged(request_address, changed);
         } else if (pkt->isAtomicOp()) {
             // Set the data in the packet to the old value in the cache
             uint8_t size = pkt->getSize();
@@ -853,11 +853,11 @@ Sequencer::hitCallback(SequencerRequest* srequest, DataBlock& data,
                 data.getDataMod(getOffset(request_address)));
             DPRINTF(RubySequencer, "AMO new data %s\n", data);
             // check data changed (This is done after record miss latency)
-            AMORecorder *amo_recorder = pkt->req->getCPU()->getAMORecorder();
-            bool changed = memcmp(pkt->getPtr<uint8_t>(), data_ptr, size);
-            warn("Value changed for addr %#lx? %d\n", pkt->getAddr(), changed);
-            amo_recorder->recordChanged(request_address, changed);
-        } else if (type != RubyRequestType_Store_Conditional || llscSuccess) {
+            // AMORecorder *amo_recorder = pkt->req->getCPU()->getAMORecorder();
+            // bool changed = memcmp(pkt->getPtr<uint8_t>(), data_ptr, size);
+            // warn("Value changed for addr %#lx? %d\n", pkt->getAddr(), changed);
+            // amo_recorder->recordChanged(request_address, changed);
+        } else if (!pkt->isPrefetchUnique() && (type != RubyRequestType_Store_Conditional || llscSuccess)) {
             // Types of stores set the actual data here, apart from
             // failed Store Conditional requests
             data.setData(pkt);
@@ -1130,6 +1130,9 @@ Sequencer::makeRequest(PacketPtr pkt)
             assert(!m_cache_inv_pkt);
             m_cache_inv_pkt = pkt;
             invL1();
+        } else if (pkt->cmd == MemCmd::PrefetchUnique) {
+            // warn("Sequencer got a prefetch unique\n");
+            primary_type = secondary_type = RubyRequestType_ST;
         } else {
             panic("Unsupported ruby packet type\n");
         }

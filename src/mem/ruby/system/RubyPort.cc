@@ -650,6 +650,12 @@ RubyPort::MemResponsePort::hitCallback(PacketPtr pkt)
         needsResponse = true;
     }
 
+    if (pkt->isPrefetchUnique()) {
+        // warn("Ruby port hit callback received prefetch request\n");
+        needsResponse = false;
+        // dealloc ptr
+    }
+
     DPRINTF(RubyPort, "Hit callback needs response %d\n", needsResponse);
 
     RubyPort *ruby_port = static_cast<RubyPort *>(&owner);

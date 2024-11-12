@@ -164,6 +164,8 @@ class BaseCPU(ClockedObject):
     enable_mem_dedup = Param.Bool(False, "Enable memory deduplication for difftest and golden memory")
 
     has_amo_recorder = Param.Bool(True, "Record AMO insts")
+    has_amo_pred = Param.Bool(True, "Predict AMO insts")
+    amo_pred_size = Param.Int(64, "AMO Predictor table size")
 
     def createInterruptController(self):
         self.interrupts = [

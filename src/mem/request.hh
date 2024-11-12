@@ -283,6 +283,7 @@ class Request
 
         // this request is used for store pf train
         STORE_PF_TRAIN              = 0x0001000000000000,
+        PREFETCH_UNIQUE             = 0x0001000000000001,
         /**
          * These flags are *not* cleared when a Request object is
          * reused (assigned a new address).

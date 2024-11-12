@@ -36,7 +36,8 @@ const char *reg_name[] = {
 
 const std::vector<uint64_t> skipCSRs = {
   0xb0200073,
-  0xb0000073
+  0xb0000073,
+  0xb0000003
 };
 
 NemuProxy::NemuProxy(int coreid, const char *ref_so, bool enable_sdcard_diff, bool enable_mem_dedup, bool multi_core)

@@ -211,6 +211,7 @@ class StaticInst : public RefCounted, public StaticInstFlags
     bool isHtmStart() const { return flags[IsHtmStart]; }
     bool isHtmStop() const { return flags[IsHtmStop]; }
     bool isHtmCancel() const { return flags[IsHtmCancel]; }
+    bool isBackwardBranch() const { return flags[IsBackwardBranch]; }
 
     bool
     isHtmCmd() const

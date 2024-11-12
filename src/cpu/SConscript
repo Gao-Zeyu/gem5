@@ -123,6 +123,7 @@ Source('thread_state.cc')
 Source('timing_expr.cc')
 Source('difftest.cc')
 Source('amo_recorder.cc')
+Source('amo_pred.cc')
 
 SimObject('DummyChecker.py', sim_objects=['DummyChecker'])
 Source('checker/cpu.cc')

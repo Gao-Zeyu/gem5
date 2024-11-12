@@ -255,6 +255,8 @@ class IEW
     /** Check misprediction  */
     void checkMisprediction(const DynInstPtr &inst);
 
+    void triggerPrefetchUnique(Addr addr) {ldstQueue.triggerPrefetchUnique(addr); }
+
     // hardware transactional memory
     // For debugging purposes, it is useful to keep track of the most recent
     // htmUid that has been committed (architecturally, not transactionally)
@@ -564,6 +566,8 @@ class IEW
   public:
 
     void setRob(ROB *rob);
+
+
 
 };
 

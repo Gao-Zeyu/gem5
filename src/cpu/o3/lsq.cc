@@ -1786,5 +1786,10 @@ LSQ::write(LSQRequest* request, uint8_t *data, ssize_t store_idx)
     return thread.at(tid).write(request, data, store_idx);
 }
 
+void
+LSQ::triggerPrefetchUnique(Addr paddr) {
+    thread.at(0).triggerPrefetchUnique(paddr);
+}
+
 } // namespace o3
 } // namespace gem5

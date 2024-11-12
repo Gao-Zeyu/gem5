@@ -148,6 +148,7 @@ class MemCmd
         TlbiExtSync,
 
         StorePFTrain,
+        PrefetchUnique,
         NUM_MEM_CMDS
     };
 
@@ -598,6 +599,7 @@ class Packet : public Printable
     inline int cmdToIndex() const { return cmd.toInt(); }
 
     bool isStorePFTrain() const     { return cmd == MemCmd::StorePFTrain;  }
+    bool isPrefetchUnique() const   { return cmd == MemCmd::PrefetchUnique; }
 
     bool isRead() const              { return cmd.isRead(); }
     bool isWrite() const             { return cmd.isWrite(); }
@@ -1085,6 +1087,11 @@ class Packet : public Printable
     static PacketPtr
     createPFtrain(const RequestPtr& req) {
         return new Packet(req, makePFtrainCmd(req));
+    }
+
+    static PacketPtr
+    createPrefetchUnique(const RequestPtr& req) {
+        return new Packet(req, MemCmd::PrefetchUnique);
     }
 
     /**

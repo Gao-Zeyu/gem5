@@ -236,6 +236,7 @@ MemCmd::commandInfo[] =
     { {IsRead, IsRequest}, InvalidCmd, "HTMAbort" },
     { {IsRequest}, InvalidCmd, "TlbiExtSync" },
     { {IsRequest}, InvalidCmd, "StorePFTrain" },
+    { {IsRequest}, InvalidCmd, "PrefetchUnique" }
 };
 
 AddrRange

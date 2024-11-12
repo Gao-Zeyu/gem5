@@ -657,6 +657,8 @@ class CPU : public BaseCPU
 
     //difftest virtual function
     void readGem5Regs() override;
+    void triggerPrefetchUnique(Addr addr) {iew.triggerPrefetchUnique(addr); }
+
 };
 
 } // namespace o3

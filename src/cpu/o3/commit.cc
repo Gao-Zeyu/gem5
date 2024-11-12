@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <set>
 #include <string>
+#include <tuple>
 
 #include "arch/riscv/decoder.hh"
 #include "arch/riscv/faults.hh"
@@ -54,6 +55,7 @@
 #include "base/logging.hh"
 #include "base/output.hh"
 #include "config/the_isa.hh"
+#include "cpu/amo_pred.hh"
 #include "cpu/amo_recorder.hh"
 #include "cpu/base.hh"
 #include "cpu/checker/cpu.hh"
@@ -1840,6 +1842,24 @@ Commit::updateComInstStats(const DynInstPtr &inst)
 
     if (inst->isCondCtrl()) {
         cpu->getAMORecorder()->updateBranch(inst->pcState().instAddr(), cpu->curCycle());
+    }
+
+    if (cpu->hasAMOPred()) {
+        if (inst->isCondCtrl() && !inst->branching() && inst->isBackwardBranch()) {
+            // warn("detected failed jump");
+            bool prefetch;
+            Addr paddr;
+            std::tie(prefetch, paddr) = cpu->getAMOPred()->tryPredict(inst->pcState().instAddr(), cpu->curCycle());
+            if (prefetch) {
+                // warn("Try prefetch %#lx\n", paddr);
+                cpu->triggerPrefetchUnique(paddr);
+            }
+        }
+
+        if (inst->isAtomic()) {
+            Addr line_addr = inst->physEffAddr - (inst->physEffAddr % cpu->cacheLineSize());
+            cpu->getAMOPred()->updateConfidence(inst->physEffAddr, cpu->curCycle());
+        }
     }
 
     if (inst->isStore()) {

@@ -725,6 +725,8 @@ class LSQUnit
     bool isStalled()  { return stalled; }
 
     CPU* getCPUPtr() {return cpu; }
+
+    void triggerPrefetchUnique(Addr paddr);
   public:
     typedef typename CircularQueue<LQEntry>::iterator LQIterator;
     typedef typename CircularQueue<SQEntry>::iterator SQIterator;
