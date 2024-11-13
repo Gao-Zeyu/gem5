@@ -57,7 +57,7 @@ class L1Cache(Cache):
     cache_level = 1
 
 class L1_ICache(L1Cache):
-    mshrs = 2
+    mshrs = 16
     is_read_only = True
 
     writeback_clean = False
@@ -84,6 +84,7 @@ class L1_DCache(L1Cache):
     force_hit = False
 
     demand_mshr_reserve = 8
+    enable_wayprediction = False
 
 class L2Cache(Cache):
     mshrs = 64
