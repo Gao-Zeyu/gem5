@@ -1516,8 +1516,7 @@ LSQ::SingleDataRequest::sendPacketToCache()
 {
     assert(_numOutstandingPackets == 0);
     bool bank_conflict = false;
-    bool tag_read_fail = false;
-    bool success = lsqUnit()->trySendPacket(isLoad(), _packets.at(0), bank_conflict, tag_read_fail);
+    bool success = lsqUnit()->trySendPacket(isLoad(), _packets.at(0), bank_conflict);
     if (success) {
         if (!bank_conflict) {
             _numOutstandingPackets = 1;
@@ -1525,10 +1524,6 @@ LSQ::SingleDataRequest::sendPacketToCache()
     }
     if (bank_conflict) {
         lsqUnit()->bankConflictReplaySchedule();
-    }
-    if (tag_read_fail) {
-        DPRINTF(TagReadFail, "sendPacketToCache fails addr: %lx\n", _packets.at(0)->getAddr());
-        lsqUnit()->tagReadFailReplaySchedule();
     }
     return success;
 }
@@ -1538,10 +1533,9 @@ LSQ::SplitDataRequest::sendPacketToCache()
 {
     /* Try to send the packets. */
     bool bank_conflict = false;
-    bool tag_read_fail = false;
     while (numReceivedPackets + _numOutstandingPackets < _packets.size()) {
         bool success = lsqUnit()->trySendPacket(isLoad(), _packets.at(numReceivedPackets + _numOutstandingPackets),
-                                                bank_conflict, tag_read_fail);
+                                                bank_conflict);
         if (success) {
             _numOutstandingPackets++;
         } else {
@@ -1550,9 +1544,6 @@ LSQ::SplitDataRequest::sendPacketToCache()
     }
     if (bank_conflict) {
         lsqUnit()->bankConflictReplaySchedule();
-    }
-    if (tag_read_fail) {
-        lsqUnit()->tagReadFailReplaySchedule();
     }
 
     if (_numOutstandingPackets == _packets.size()) {

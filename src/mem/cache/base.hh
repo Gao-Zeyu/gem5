@@ -291,6 +291,10 @@ class BaseCache : public ClockedObject, CacheAccessor
         /** Return to normal operation and accept new requests. */
         void clearBlocked();
 
+        void retryImmediately();
+
+        void retryImmediately(Tick delay);
+
         bool isBlocked() const { return blocked; }
 
       protected:
@@ -565,7 +569,7 @@ class BaseCache : public ClockedObject, CacheAccessor
      */
     virtual void recvTimingReq(PacketPtr pkt);
 
-    bool tryAccessTag(PacketPtr pkt);
+    bool tryAccess(PacketPtr pkt);
 
     /**way prediction **/
     const int SETROFFSET = 6;
@@ -949,11 +953,14 @@ class BaseCache : public ClockedObject, CacheAccessor
 
     /** Block size of this cache */
     const unsigned blkSize;
+    int blkAddrShift;
     const int size ;
     const int assoc;
     const bool enableWayPrediction;
     const int DEFAULTWAYPRESIZE = 65536;
     std::vector<std::vector<int>> wayPreTable;
+
+    const int l2l3Banksize = 4;
 
     /**
      * The latency of tag lookup of a cache. It occurs when there is
@@ -1053,6 +1060,20 @@ class BaseCache : public ClockedObject, CacheAccessor
     ArchDBer *archDBer;
 
     int squashedWays;
+
+    std::vector<Tick> lastWriteFinishTick;
+
+    int getBank(Addr addr) {
+        return (addr >> blkAddrShift) & 0b11;
+    }
+
+    void writeBlock(Addr addr, Tick when) {
+        lastWriteFinishTick[getBank(addr)] = when + cyclesToTicks(dataLatency + Cycles(1));
+    }
+
+    bool isWriteBlock(Addr addr) {
+        return lastWriteFinishTick[getBank(addr)] > curTick();
+    }
 
   public:
     /** System we are currently operating in. */

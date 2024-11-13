@@ -158,7 +158,8 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
 
     // forward snoops is overridden in init() once we can query
     // whether the connected requestor is actually snooping or not
-
+    blkAddrShift = std::log2(blkSize);
+    lastWriteFinishTick.resize(l2l3Banksize, 0);
     tempBlock = new TempCacheBlk(blkSize);
     tags->tagsInit();
     for (int i = 0; i < size / assoc / blkSize; i++) {
@@ -233,6 +234,26 @@ BaseCache::CacheResponsePort::clearBlocked()
     if (mustSendRetry) {
         // @TODO: need to find a better time (next cycle?)
         owner.schedule(sendRetryEvent, curTick() + 1);
+    }
+}
+
+void
+BaseCache::CacheResponsePort::retryImmediately()
+{
+    if (sendRetryEvent.scheduled()) {
+        owner.reschedule(sendRetryEvent, curTick() + 1);
+    } else {
+        owner.schedule(sendRetryEvent, curTick() + 1);
+    }
+}
+
+void
+BaseCache::CacheResponsePort::retryImmediately(Tick delay)
+{
+    if (sendRetryEvent.scheduled()) {
+        owner.reschedule(sendRetryEvent, curTick() + delay);
+    } else {
+        owner.schedule(sendRetryEvent, curTick() + delay);
     }
 }
 
@@ -379,6 +400,9 @@ BaseCache::handleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_time, b
         else {
             cpuSidePort.schedTimingResp(pkt, request_time);
         }
+        if (pkt->isWrite()) {
+            writeBlock(pkt->getAddr(), request_time);
+        }
     } else {
         DPRINTF(Cache, "%s satisfied %s, no response needed\n", __func__,
                 pkt->print());
@@ -502,15 +526,17 @@ BaseCache::handleTimingReqMiss(PacketPtr pkt, MSHR *mshr, CacheBlk *blk,
 }
 
 bool
-BaseCache::tryAccessTag(PacketPtr pkt)
+BaseCache::tryAccess(PacketPtr pkt)
 {
-    if ((cacheLevel == 1) && pkt->needsResponse() && pkt->isRead()) {
+    if (pkt->needsResponse() && pkt->isRead()) {
         if (!tagAccessCheck()) {
             // send tag read fail signal to lsu
             stats.loadTagReadFails++;
-            pkt->tagReadFail = true;
             return false;
         }
+    }
+    if (isWriteBlock(pkt->getAddr())) {
+        return false;
     }
     return true;
 }
@@ -1164,16 +1190,14 @@ BaseCache::getNextQueueEntry()
         // If we have a miss queue slot, we can try a prefetch
         bool has_pending_pkt = prefetcher->hasPendingPacket();
         PacketPtr pkt = nullptr;
-        if (cacheLevel == 1) {
-            // load & prefetch share a limited number of cache tag read ports
-            if (has_pending_pkt && tagAccessCheck()) {
-                pkt = prefetcher->getPacket();
-            } else if (has_pending_pkt) {
-                stats.prefetchTagReadFails++;
-            }
-        } else {
+
+        // load & prefetch share a limited number of cache tag read ports
+        if (has_pending_pkt && tagAccessCheck()) {
             pkt = prefetcher->getPacket();
+        } else if (has_pending_pkt) {
+            stats.prefetchTagReadFails++;
         }
+
         if (pkt) {
             Addr pf_addr = pkt->getBlockAddr(blkSize);
             PrefetchSourceType pf_type = pkt->req->getXsMetadata().prefetchSource;
@@ -1955,8 +1979,8 @@ BaseCache::handleFill(PacketPtr pkt, CacheBlk *blk, PacketList &writebacks,
         updateBlockData(blk, pkt, has_old_data);
     }
     // The block will be ready when the payload arrives and the fill is done
-    blk->setWhenReady(clockEdge(fillLatency) + pkt->headerDelay +
-                      pkt->payloadDelay);
+    Tick blk_ready_tick = clockEdge(fillLatency) + pkt->headerDelay + pkt->payloadDelay;
+    blk->setWhenReady(blk_ready_tick);
 
     Request::XsMetadata blk_meta = blk->getXsMetadata();
     blk_meta.prefetchSource = pkt->req->getPFSource();
@@ -2949,11 +2973,12 @@ BaseCache::CpuSidePort::tryTiming(PacketPtr pkt)
         // either already committed to send a retry, or blocked
         mustSendRetry = true;
         return false;
-    }
-    if (!cache->tryAccessTag(pkt)) {
+    } else if (!cache->tryAccess(pkt)) {
+        retryImmediately();
         DPRINTF(TagReadFail, "tryAccessTag fails addr: %lx\n", pkt->getAddr());
         return false;
     }
+
     mustSendRetry = false;
     return true;
 }

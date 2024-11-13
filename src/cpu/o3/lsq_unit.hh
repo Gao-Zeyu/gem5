@@ -481,9 +481,7 @@ class LSQUnit
      */
     void bankConflictReplaySchedule();
 
-    void tagReadFailReplaySchedule();
-
-    bool trySendPacket(bool isLoad, PacketPtr data_pkt, bool &bank_conflict, bool &tag_read_fail);
+    bool trySendPacket(bool isLoad, PacketPtr data_pkt, bool &bank_conflict);
 
     bool sbufferSendPacket(PacketPtr data_pkt);
 
@@ -548,22 +546,6 @@ class LSQUnit
 
       private:
         /** The pointer to the LSQ unit that issued the bankConflictReplayEvent. */
-        LSQUnit *lsqPtr;
-    };
-    class tagReadFailReplayEvent : public Event
-    {
-      public:
-        /** Constructs a tagReadFail event. */
-        tagReadFailReplayEvent(LSQUnit *lsq_ptr);
-
-        /** Processes the tagReadFail event. */
-        void process();
-
-        /** Returns the description of this event. */
-        const char *description() const;
-
-      private:
-        /** The pointer to the LSQ unit that issued the tagReadFailReplayEvent. */
         LSQUnit *lsqPtr;
     };
 

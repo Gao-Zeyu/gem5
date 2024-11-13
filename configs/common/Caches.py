@@ -81,6 +81,8 @@ class L1_DCache(L1Cache):
     # This is communication latency between l1 & l2
     response_latency = 4
 
+    tag_load_read_ports = 3
+
     force_hit = False
 
     demand_mshr_reserve = 8
@@ -99,6 +101,8 @@ class L2Cache(Cache):
 
     # This is communication latency between l2 & l3
     response_latency = 15
+
+    tag_load_read_ports = 4
 
     cache_level = 2
     enable_wayprediction = False
@@ -120,6 +124,8 @@ class L3Cache(Cache):
     # But XS's miss latency on mcf (less random) is averagely 211 on padding=112.
     # To make XS's L3 miss latency similar to 5950x, we reduce padding from 112 to (112 - (211-165)) = 66 cycle
     response_latency = 66
+
+    tag_load_read_ports = 4
 
     cache_level = 3
     enable_wayprediction = False
