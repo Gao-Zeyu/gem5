@@ -551,17 +551,17 @@ InstructionQueue::execLatencyCheck(const DynInstPtr& inst, uint32_t& op_latency)
             delay_ = std::max(clz(rs2) - clz(rs1), 0);
             if (rs2 == 1) {
                 // rs1 / 1 = rs1
-                op_latency = 6;
+                op_latency = 5;
             } else if (rs1 == rs2) {
                 // rs1 / rs2 = 1 rem 0
-                op_latency = 8;
+                op_latency = 7;
             } else if (clz(rs2) - clz(rs1) < 0) {
                 // if rs2 > rs1 then rs1/rs2 = 0 rem rs1
-                op_latency = 6;
+                op_latency = 5;
             } else {
                 // base_latency + dynamic_latency
                 // dynamic_latency determined by delay_
-                op_latency = 8 + delay_ / 4;
+                op_latency = 7 + delay_ / 4;
             }
             return true;
         case OpClass::FloatSqrt:
