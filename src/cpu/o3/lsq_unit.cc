@@ -1746,6 +1746,8 @@ LSQUnit::completeStore(typename StoreQueue::iterator store_idx, bool from_sbuffe
             curTick() - store_inst->fetchTick;
     }
 #endif
+        store_inst->storeTickdb =
+            curTick() - store_inst->fetchTickdb;
 
     if (isStalled() &&
         store_inst->seqNum == stallingStoreIsn) {

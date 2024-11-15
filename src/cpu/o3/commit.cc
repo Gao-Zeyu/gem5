@@ -63,6 +63,7 @@
 #include "cpu/o3/thread_state.hh"
 #include "cpu/timebuf.hh"
 #include "debug/Activity.hh"
+#include "debug/ArchDB.hh"
 #include "debug/Commit.hh"
 #include "debug/CommitRate.hh"
 #include "debug/CommitTrace.hh"
@@ -76,6 +77,7 @@
 #include "debug/InstCommited.hh"
 #include "debug/O3PipeView.hh"
 #include "params/BaseO3CPU.hh"
+#include "sim/arch_db.hh"
 #include "sim/core.hh"
 #include "sim/cur_tick.hh"
 #include "sim/faults.hh"
@@ -1301,6 +1303,15 @@ Commit::commitInsts()
                     diffInst(tid, head_inst);
                 }
 
+
+                if (archDBer) {
+                    assert(archDBer);
+                    archDBer->commitedTraceMessage(
+                        head_inst->getPC(), head_inst->fetchTickdb, head_inst->decodeTickdb, head_inst->renameTickdb,
+                        head_inst->dispatchTickdb, head_inst->issueTickdb, head_inst->completeTickdb,
+                        head_inst->commitTickdb, head_inst->storeTickdb, this->name().c_str());
+                }
+
                 // Check instruction execution if it successfully commits and
                 // is not carrying a fault.
                 if (cpu->checker) {
@@ -1683,7 +1694,7 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
                 head_inst->seqNum, head_inst->commitTick);
     }
 #endif
-
+    head_inst->commitTickdb = curTick() - head_inst->fetchTickdb;
     // If this was a store, record it for this cycle.
     if (head_inst->isStore() || head_inst->isAtomic())
         committedStores[tid] = true;

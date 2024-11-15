@@ -709,6 +709,7 @@ InstructionQueue::scheduleReadyInsts()
 #if TRACING_ON
         issued_inst->issueTick = curTick() - issued_inst->fetchTick;
 #endif
+        issued_inst->issueTickdb = curTick() - issued_inst->fetchTickdb;
         if (issued_inst->firstIssue == -1) {
             issued_inst->firstIssue = curTick();
         }

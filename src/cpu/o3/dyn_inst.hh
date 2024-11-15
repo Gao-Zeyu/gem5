@@ -1124,6 +1124,14 @@ class DynInst : public ExecContext, public RefCounted
     int32_t commitTick = -1;
     int32_t storeTick = -1;
 #endif
+    Tick fetchTickdb = -1;      // instruction fetch is completed.
+    int32_t decodeTickdb = -1;  // instruction enters decode phase
+    int32_t renameTickdb = -1;  // instruction enters rename phase
+    int32_t dispatchTickdb = -1;
+    int32_t issueTickdb = -1;
+    int32_t completeTickdb = -1;
+    int32_t commitTickdb = -1;
+    int32_t storeTickdb = -1;
 
     /* Values used by LoadToUse stat */
     Tick enterDQTick = -1;

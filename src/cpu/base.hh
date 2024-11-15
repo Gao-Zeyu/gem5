@@ -685,6 +685,7 @@ class BaseCPU : public ClockedObject
     // difftest
   protected:
     bool enableDifftest;
+    bool enableTraceMessage;
     bool dumpCommitFlag;
     int dumpStartNum;
     bool enableRVV{false};
@@ -778,6 +779,7 @@ class BaseCPU : public ClockedObject
     void difftestStep(ThreadID tid, InstSeqNum seq);
 
     inline bool difftestEnabled() const { return enableDifftest; }
+    inline bool TraceMessageEnabled() const { return enableTraceMessage; }
 
     void displayGem5Regs();
 

@@ -771,6 +771,7 @@ Decode::decodeInsts(ThreadID tid)
                     inst->seqNum);
         }
 #endif
+        inst->decodeTickdb = curTick() - inst->fetchTickdb;
 
         // Ensure that if it was predicted as a branch, it really is a
         // branch.

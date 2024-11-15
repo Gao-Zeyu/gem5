@@ -1285,6 +1285,7 @@ IEW::dispatchInstFromDispQue(ThreadID tid)
     #if TRACING_ON
             inst->dispatchTick = curTick() - inst->fetchTick;
     #endif
+    inst->dispatchTickdb = curTick() - inst->fetchTickdb;
             ppDispatch->notify(inst);
 
             dispQue[i].pop_front();
@@ -1791,6 +1792,7 @@ IEW::updateExeInstStats(const DynInstPtr& inst)
         inst->completeTick = curTick() - inst->fetchTick;
     }
 #endif
+inst->completeTickdb = curTick() - inst->fetchTickdb;
 
     //
     //  Control operations

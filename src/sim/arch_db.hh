@@ -62,6 +62,7 @@ class ArchDBer : public SimObject
     bool dumpBopTrainTrace;
     bool dumpSMSTrainTrace;
     bool dumpL1WayPreTrace;
+    bool dumpCommitTracemessage;
 
     sqlite3 *mem_db;
     char * zErrMsg;
@@ -89,7 +90,8 @@ class ArchDBer : public SimObject
     );
 
     void evictTraceWrite(int cache_level, Tick tick, uint64_t paddr, uint64_t stamp, const char *site);
-
+    void commitedTraceMessage(uint64_t pc, Tick fetchtick, Tick decodetick, Tick renameTick, Tick dispatchTick,
+                              Tick issueTick, Tick completeTick, Tick commitTick, Tick storetick, const char *site);
     void memTraceWrite(Tick tick, bool is_load, Addr pc, Addr vaddr, Addr paddr, uint64_t issued, uint64_t translated,
                        uint64_t completed, uint64_t committed, uint64_t writenback, int pf_src);
 

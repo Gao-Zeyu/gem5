@@ -913,6 +913,7 @@ Rename::sortInsts()
             inst->renameTick = curTick() - inst->fetchTick;
         }
 #endif
+        inst->renameTickdb = curTick() - inst->fetchTickdb;
     }
 }
 

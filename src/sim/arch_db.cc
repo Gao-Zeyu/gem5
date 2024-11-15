@@ -17,6 +17,7 @@ ArchDBer::ArchDBer(const Params &p)
     dumpBopTrainTrace(p.dump_bop_train_trace),
     dumpSMSTrainTrace(p.dump_sms_train_trace),
     dumpL1WayPreTrace(p.dump_l1d_way_pre_trace),
+    dumpCommitTracemessage(p.dump_commit_trace_message),
     mem_db(nullptr), zErrMsg(nullptr),rc(0),
     db_path(p.arch_db_file)
 {
@@ -194,6 +195,26 @@ ArchDBer::evictTraceWrite(int cache_level, Tick tick, uint64_t paddr, uint64_t s
   if (rc != SQLITE_OK) {
     fatal("SQL error: %s\n", zErrMsg);
   };
+}
+
+void
+ArchDBer::commitedTraceMessage(uint64_t pc, Tick fetchTick, Tick decodeTick, Tick renameTick, Tick dispatchTick,
+                               Tick issueTick, Tick completeTick, Tick commitTick, Tick storetick, const char *site)
+{
+    bool dump_me = dumpGlobal && dumpCommitTracemessage;
+    if (!dump_me)
+        return;
+    char sql[512];
+    sprintf(sql,
+            "INSERT INTO "
+            "CommitedTraceMessage(PC,FETCHTICK,DECODETICK,REANMETICK,DISPATCHTICK,ISSUETICK,COMPLETSTICK,COMMITTICK,"
+            "STORETICK,SITE) "
+            "VALUES(%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,'%s');",
+            pc, fetchTick, decodeTick, renameTick, dispatchTick, issueTick, completeTick, commitTick, storetick, site);
+    rc = sqlite3_exec(mem_db, sql, callback, 0, &zErrMsg);
+    if (rc != SQLITE_OK) {
+        fatal("SQL error: %s\n", zErrMsg);
+    };
 }
 
 void

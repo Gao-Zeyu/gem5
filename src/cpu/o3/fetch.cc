@@ -1809,7 +1809,7 @@ Fetch::fetch(bool &status_change)
                         instruction->seqNum);
             }
 #endif
-
+            instruction->fetchTickdb = curTick();
             set(next_pc, this_pc);
 
             // If we're branching after this instruction, quit fetching
