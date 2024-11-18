@@ -214,6 +214,10 @@ def build_test_system(np, args):
         for cpu in test_sys.cpu:
             cpu.enable_riscv_vector = True
 
+    # amo pred
+    for cpu in test_sys.cpu:
+        cpu.has_amo_pred = args.amo_predictor
+
     # config arch db
     if args.enable_arch_db:
         test_sys.arch_db = ArchDBer(arch_db_file=args.arch_db_file)

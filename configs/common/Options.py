@@ -332,6 +332,8 @@ def addCommonOptions(parser, configure_xiangshan=False):
         "that are present under any of the roots. If not given, dump all "
         "stats. ")
 
+    parser.add_argument("--amo-predictor", action="store_true", default=False, help="Enable AMO predictor")
+
     if configure_xiangshan:
         return
     # Following options are not available in XiangShan
