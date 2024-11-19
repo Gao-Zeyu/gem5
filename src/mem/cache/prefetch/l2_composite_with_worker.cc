@@ -1,5 +1,6 @@
 #include "mem/cache/prefetch/l2_composite_with_worker.hh"
 
+#include "debug/CDPFilter.hh"
 #include "debug/HWPrefetch.hh"
 #include "mem/cache/prefetch/composite_with_worker.hh"
 
@@ -14,6 +15,31 @@ L2CompositeWithWorkerPrefetcher::L2CompositeWithWorkerPrefetcher(const L2Composi
 {
     cdp->pfLRUFilter = &pfLRUFilter;
     cdp->parentRid = p.sys->getRequestorId(this);
+}
+
+void
+L2CompositeWithWorkerPrefetcher::prefetchUnused(Addr paddr, PrefetchSourceType pfSource)
+{
+    Base::prefetchUnused(pfSource);
+    if (pfSource == PrefetchSourceType::CDP) {
+        cdp->prefetchUnused(paddr);
+    }
+}
+
+void
+L2CompositeWithWorkerPrefetcher::addToQueue(std::list<DeferredPacket> &queue, DeferredPacket &dpp)
+{
+    if (&queue == &pfq) {
+        // DPRINTF(CDPFilter, "addToQueue source: %#llx, vaddr: %#llx, paddr: %#llx\n",
+        // dpp.pkt->req->getXsMetadata().prefetchSource, dpp.pkt->getAddr(), dpp.pkt->req->getPaddr());
+        if (dpp.pkt->req->getXsMetadata().prefetchSource == PrefetchSourceType::CDP) {
+            if (cdp->needFilter(dpp.pkt->req->getPaddr())) {
+                delete dpp.pkt;
+                return;
+            }
+        }
+    }
+    Queued::addToQueue(queue, dpp);
 }
 
 void

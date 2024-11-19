@@ -504,6 +504,27 @@ class CDP(QueuedPrefetcher):
         LRURP(),
         "Replacement policy of vpnTable"
     )
+    filter_table_assoc = Param.Unsigned(256,
+        "Ways of filterTable")
+    filter_table_entries = Param.MemorySize(
+        "256",
+        "num of entries in filterTable"
+    )
+    filter_table_indexing_policy = Param.BaseIndexingPolicy(
+        SetAssociative(
+            entry_size=1,
+            assoc=Parent.filter_table_assoc,
+            size=Parent.filter_table_entries),
+        "Indexing policy of filterTable"
+    )
+    filter_table_replacement_policy = Param.BaseReplacementPolicy(
+        LRURP(),
+        "Replacement policy of filterTable"
+    )
+    filter_entry_region_blks = Param.Unsigned(64,
+        "How many blks a region can track")
+    filter_entry_granularity = Param.Unsigned(4096,
+        "How many bytes a blk in a region can track")
     throttle_aggressiveness = Param.Float(2.0,
         "A parameter to control the aggressiveness of throttling")
 

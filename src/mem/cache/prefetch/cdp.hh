@@ -326,6 +326,53 @@ class CDP : public Queued
 
     VpnTable<VpnEntry> vpnTable;
 
+    class FilterTableEntry : public TaggedEntry
+    {
+        private:
+            std::vector<SatCounter8> bit_map;
+        public:
+            FilterTableEntry(uint64_t size)
+            {
+                assert(size % 2 == 0);
+                bit_map.assign(size, SatCounter8{2, 2});
+            }
+
+            void reset() {
+                bit_map.assign(bit_map.size(), SatCounter8{2, 2});
+            }
+
+            uint64_t getInnerAddr(Addr addr) const {
+                // Note:
+                // addr is the `blockIndex(block address)`
+                return addr % bit_map.size();
+            }
+
+            bool needFilter(Addr addr) const {
+                uint64_t idx = getInnerAddr(addr);
+                return bit_map[idx].isSaturated();
+            }
+
+            uint64_t getValue(Addr addr) {
+                uint64_t idx = getInnerAddr(addr);
+                return bit_map[idx].rawCounter();
+            }
+
+            void setFilter(Addr addr) {
+                uint64_t idx = getInnerAddr(addr);
+                bit_map[idx]++;
+            }
+
+            void unSetFilter(Addr addr) {
+                uint64_t idx = getInnerAddr(addr);
+                bit_map[idx]--;
+            }
+    };
+
+    AssociativeSet<FilterTableEntry> filterTable;
+
+    const uint64_t filterRegionBlks;
+    const uint64_t filterEntryGranularityBits;
+
   public:
     StatGroup *prefetchStatsPtr = nullptr;
     RequestorID parentRid;
@@ -333,8 +380,8 @@ class CDP : public Queued
     float mpki = 1;
     float rivalCoverage = 1;
     // hyperparameters: Coverage & Accuracy Threshold
-    const float Tcoverage = 0.2;
-    const float Alow = 0.25;
+    const float Tcoverage = 0.16;
+    const float Alow = 0.26;
     const float Ahigh = 0.5;
     const float RivalTcoverage = 0.5;
 
@@ -374,6 +421,15 @@ class CDP : public Queued
     void calculatePrefetch(const PrefetchInfo &pfi, std::vector<AddrPriority> &addresses) override;
 
     void addToVpnTable(Addr vaddr, bool pf_hit_cdp);
+
+    void insertFilterTable(Addr addr, bool useful);
+    bool needFilter(Addr addr);
+    void prefetchUsed(Addr addr);
+    void prefetchUnused(Addr addr);
+
+    Addr filterTableAddr(Addr addr) {
+        return addr >> filterEntryGranularityBits;
+    }
 
     float getCdpTrueAccuracy() const {
         float trueAccuracy = 1;
@@ -470,6 +526,9 @@ class CDP : public Queued
         statistics::Scalar dataNotifyExitDepth;
         statistics::Scalar dataNotifyNoAddrFound;
         statistics::Scalar dataNotifyNoVA;
+        statistics::Scalar usefulInsertFilter;
+        statistics::Scalar unusefulInsertFilter;
+        statistics::Scalar actualFilted;
         statistics::Scalar dataNotifyNoData;
         statistics::Scalar missNotifyCalled;
         statistics::Scalar pfHitCDP;

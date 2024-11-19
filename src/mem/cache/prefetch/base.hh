@@ -495,6 +495,8 @@ class Base : public ClockedObject
         prefetchStats.pfUnused_srcs[pfSource]++;
     }
 
+    virtual void prefetchUnused(Addr paddr, PrefetchSourceType pfSource) { prefetchUnused(pfSource); }
+
     void
     incrDemandMhsrMisses()
     {

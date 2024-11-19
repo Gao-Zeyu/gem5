@@ -19,6 +19,10 @@ class L2CompositeWithWorkerPrefetcher : public CompositeWithWorkerPrefetcher
   public:
     L2CompositeWithWorkerPrefetcher(const L2CompositeWithWorkerPrefetcherParams &p);
 
+    void prefetchUnused(Addr paddr, PrefetchSourceType pfSource) override;
+
+    void addToQueue(std::list<DeferredPacket> &queue, DeferredPacket &dpp) override;
+
     void calculatePrefetch(const PrefetchInfo &pfi, std::vector<AddrPriority> &addresses) override;
 
     void addHintDownStream(Base *down_stream) override
