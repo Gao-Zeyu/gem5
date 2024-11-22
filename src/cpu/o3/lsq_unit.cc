@@ -103,14 +103,17 @@ StoreBufferEntry::recordForward(PacketPtr pkt, LSQ::LSQRequest *req)
     if (goffset > 0) {
         assert(offset == 0);
     }
+    bool partial_forward = false;
     for (int i = 0; i < pkt->getSize(); i++) {
         if (validMask[offset + i]) {
             assert(goffset + i < req->_size);
             req->forwardPackets.push_back(
                 LSQ::LSQRequest::FWDPacket{.idx = goffset + i, .byte = blockDatas[offset + i]});
+        } else {
+            partial_forward = true;
         }
     }
-    return false;
+    return !partial_forward;
 }
 
 void
@@ -557,6 +560,8 @@ LSQUnit::LSQUnitStats::LSQUnitStats(statistics::Group *parent)
       ADD_STAT(sbufferEvictDuetoFull, statistics::units::Count::get(), ""),
       ADD_STAT(sbufferEvictDuetoSQFull, statistics::units::Count::get(), ""),
       ADD_STAT(sbufferEvictDuetoTimeout, statistics::units::Count::get(), ""),
+      ADD_STAT(sbufferPartialForward, statistics::units::Count::get(), ""),
+      ADD_STAT(sbufferFullyForward, statistics::units::Count::get(), ""),
       ADD_STAT(loadToUse, "Distribution of cycle latency between the "
                 "first time a load is issued and its completion"),
       ADD_STAT(loadTranslationLat, "Distribution of cycle latency between the "
@@ -1853,11 +1858,19 @@ LSQUnit::trySendPacket(bool isLoad, PacketPtr data_pkt, bool &bank_conflict, boo
         if (isLoad) {
             auto entry = storeBuffer.get(pkt->getAddr() & cacheBlockMask);
             if (entry) {
+                bool fullyforward = false;
                 DPRINTF(StoreBuffer, "sbuffer entry[%#x] coverage %s\n", entry->blockPaddr, pkt->print());
-                entry->recordForward(pkt, request);
+                fullyforward |= entry->recordForward(pkt, request);
                 if (entry->vice) {
                     DPRINTF(StoreBuffer, "sbuffer vice entry coverage\n");
-                    entry->vice->recordForward(pkt, request);
+                    fullyforward |= entry->vice->recordForward(pkt, request);
+                }
+                if (request->forwardPackets.size() > 0) {
+                    if (fullyforward) {
+                        stats.sbufferFullyForward++;
+                    } else {
+                        stats.sbufferPartialForward++;
+                    }
                 }
             }
         }
@@ -1982,6 +1995,12 @@ LSQUnit::dumpInsts() const
 void LSQUnit::schedule(Event& ev, Tick when) { cpu->schedule(ev, when); }
 
 BaseMMU *LSQUnit::getMMUPtr() { return cpu->mmu; }
+
+uint64_t
+LSQUnit::allocateLoadReqSeqNum()
+{
+    return lsq->allocateLoadReqSeqNum();
+}
 
 unsigned int
 LSQUnit::cacheLineSize()

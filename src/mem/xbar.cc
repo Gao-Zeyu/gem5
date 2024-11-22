@@ -123,6 +123,26 @@ BaseXBar::calcPacketTiming(PacketPtr pkt, Tick header_delay)
     panic_if(pkt->headerDelay > sim_clock::as_int::us,
              "Encountered header delay exceeding 1 us\n");
 
+    // 0.5 req/resp per cycle
+    // const unsigned proc_latency = 2;
+    // if (pkt->isRequest()) {
+    //     Tick pkt_tick = curTick() + pkt->headerDelay;
+    //     if (lastReqFinishTick > pkt_tick) {
+    //         pkt->headerDelay += lastReqFinishTick - pkt_tick;
+    //         lastReqFinishTick = curTick() + pkt->headerDelay + proc_latency * clockPeriod(); // lastReqFinishTick + 2 * clockPeriod
+    //     } else {
+    //         lastReqFinishTick = pkt_tick + proc_latency * clockPeriod();    
+    //     }
+    // } else if (pkt->isResponse()) {
+    //     Tick pkt_tick = curTick() + pkt->headerDelay;
+    //     if (lastRespFinishTick > pkt_tick) {
+    //         pkt->headerDelay += lastRespFinishTick - pkt_tick;
+    //         lastRespFinishTick = curTick() + pkt->headerDelay + proc_latency * clockPeriod(); // lastRespFinishTick + 2 * clockPeriod
+    //     } else {
+    //         lastRespFinishTick = pkt_tick + proc_latency * clockPeriod();    
+    //     }
+    // }
+
     if (pkt->hasData()) {
         // the payloadDelay takes into account the relative time to
         // deliver the payload of the packet, after the header delay,

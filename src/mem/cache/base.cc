@@ -72,6 +72,8 @@
 #include "sim/cur_tick.hh"
 #include "sim/eventq.hh"
 
+#include "debug/CPUReqTrace.hh"
+
 namespace gem5
 {
 
@@ -518,6 +520,11 @@ BaseCache::tryAccessTag(PacketPtr pkt)
 void
 BaseCache::recvTimingReq(PacketPtr pkt)
 {
+    if (debug::CPUReqTrace) [[unlikely]] {
+        if (pkt->req->getSeqNum()) {
+            DPRINTF(CPUReqTrace, "[reqTrace %llu] request at L%d\n", pkt->req->getSeqNum(), cacheLevel);
+        }
+    }
 
     if (pkt->isStorePFTrain()) {
         // send store prefetch train request
@@ -642,7 +649,7 @@ BaseCache::recvTimingReq(PacketPtr pkt)
         }
 
         handleTimingReqHit(pkt, blk, request_time, first_acc_after_pf);
-        if (cacheLevel == 1 && pkt->isResponse() && pkt->isRead() && lat > 1) {
+        if (cacheLevel == 1 && pkt->isResponse() && pkt->isRead() && lat > 2) {
             // send cache miss signal
             cpuSidePort.sendCustomSignal(pkt, DcacheRespType::Miss);
         }
@@ -738,6 +745,13 @@ BaseCache::handleUncacheableWriteResp(PacketPtr pkt)
 void
 BaseCache::recvTimingResp(PacketPtr pkt)
 {
+
+    if (debug::CPUReqTrace) [[unlikely]] {
+        if (pkt->req->getSeqNum()) {
+            DPRINTF(CPUReqTrace, "[reqTrace %llu] response at L%d\n", pkt->req->getSeqNum(), cacheLevel);
+        }
+    }
+
     assert(pkt->isResponse());
 
     // all header delay should be paid for by the crossbar, unless
@@ -2620,6 +2634,8 @@ BaseCache::CacheStats::CacheStats(BaseCache &c)
              "average number of cycles each access was blocked"),
     ADD_STAT(writebacks, statistics::units::Count::get(),
              "number of writebacks"),
+    ADD_STAT(respond, statistics::units::Count::get(),
+             "number of response per cycle"),
     ADD_STAT(demandMshrHits, statistics::units::Count::get(),
              "number of demand (read+write) MSHR hits"),
     ADD_STAT(overallMshrHits, statistics::units::Count::get(),
@@ -2681,6 +2697,9 @@ BaseCache::CacheStats::CacheStats(BaseCache &c)
 {
     for (int idx = 0; idx < MemCmd::NUM_MEM_CMDS; ++idx)
         cmd[idx].reset(new CacheCmdStats(c, MemCmd(idx).toString()));
+
+    respond.flags(statistics::nozero);
+    respond.init(1, 32, 1);
 }
 
 void

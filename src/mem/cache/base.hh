@@ -305,7 +305,7 @@ class BaseCache : public ClockedObject, CacheAccessor
 
         bool mustSendRetry;
 
-      private:
+    //   private:
 
         void processSendRetry();
 
@@ -1170,6 +1170,8 @@ class BaseCache : public ClockedObject, CacheAccessor
 
         /** Number of blocks written back per thread. */
         statistics::Vector writebacks;
+
+        statistics::Distribution respond;
 
         /** Demand misses that hit in the MSHRs. */
         statistics::Formula demandMshrHits;

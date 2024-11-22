@@ -1237,6 +1237,9 @@ LSQ::LSQRequest::addReq(Addr addr, unsigned size,
                 _inst->pcState().instAddr(), _inst->contextId(),
                 std::move(_amo_op));
         req->setByteEnable(byte_enable);
+        if (isLoad()) {
+            req->setReqSeqNum(_port.allocateLoadReqSeqNum());
+        }
 
         /* If the request is marked as NO_ACCESS, setup a local access */
         if (_flags.isSet(Request::NO_ACCESS)) {

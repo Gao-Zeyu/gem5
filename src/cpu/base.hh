@@ -689,7 +689,6 @@ class BaseCPU : public ClockedObject
     int dumpStartNum;
     bool enableRVV{false};
     bool enableRVHDIFF{false};
-    bool enabledifftesInstTrace{false};
     std::shared_ptr<DiffAllStates> diffAllStates{};
 
     enum  diffRegConfig

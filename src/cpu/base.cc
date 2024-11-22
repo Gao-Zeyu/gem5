@@ -163,7 +163,6 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
       dumpStartNum(p.dump_start),
       enableRVV(p.enable_riscv_vector),
       enableRVHDIFF(p.enable_riscv_h),
-      enabledifftesInstTrace(p.enable_difftest_inst_trace),
       noHypeMode(false),
       enableMemDedup(p.enable_mem_dedup)
 {
@@ -1406,7 +1405,7 @@ BaseCPU::diffWithNEMU(ThreadID tid, InstSeqNum seq)
             }
         }
     }
-    if (diff_at && (enabledifftesInstTrace)) {
+    if (diff_at) {
         diffMsg += csprintf("In CPU%d: NEMU PC: %#10lx, GEM5 PC: %#10lx, inst: %s\n", cpuId(),
         nemu_pc, gem5_pc,
         diffInfo.inst->disassemble(diffInfo.pc->instAddr()).c_str());
@@ -1482,8 +1481,7 @@ BaseCPU::difftestStep(ThreadID tid, InstSeqNum seq)
                         "NEMU seems to commit the failed mem instruction\n");
                 }
             } else {
-                if (enabledifftesInstTrace)
-                    reportDiffMismatch(tid, seq);
+                reportDiffMismatch(tid, seq);
                 panic("Difftest failed!\n");
 
             }
@@ -1497,9 +1495,7 @@ BaseCPU::difftestStep(ThreadID tid, InstSeqNum seq)
             diffInfo.pc->instAddr(),
             diffInfo.inst->disassemble(diffInfo.pc->instAddr()).c_str()));
     }
-    if (enabledifftesInstTrace) {
-        DPRINTF(Diff, "commit_pc: %s, committedInstNum: %d\n", diffInfo.pc, committedInstNum);
-    }
+    DPRINTF(Diff, "commit_pc: %s, committedInstNum: %d\n", diffInfo.pc, committedInstNum);
 }
 
 void

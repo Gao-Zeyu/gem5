@@ -65,28 +65,33 @@ class L1_ICache(L1Cache):
     tag_latency = 1
     data_latency = 1
     sequential_access = False
+    
 
-    response_latency = 4
+    response_latency = 1
     enable_wayprediction = False
 
 class L1_DCache(L1Cache):
-    mshrs = 32
+    mshrs = 16
+    write_buffers = 18
 
     writeback_clean = False
 
     # aligned latency:
     tag_latency = 1
-    data_latency = 1
+    data_latency = 2
     sequential_access = False
-    # This is communication latency between l1 & l2
-    response_latency = 4
+    # recvTimingResp serviceMSHR latency, not really response latency
+    response_latency = 1
 
     force_hit = False
 
-    demand_mshr_reserve = 8
+    demand_mshr_reserve = 6
+
+    enable_wayprediction = False
 
 class L2Cache(Cache):
     mshrs = 64
+    write_buffers = 64
     tgts_per_mshr = 20
     clusivity='mostly_incl'
     # always writeback clean when lower level is exclusive
@@ -94,32 +99,27 @@ class L2Cache(Cache):
 
     # aligned latency:
     tag_latency = 2
-    data_latency = 13
+    data_latency = 3
     sequential_access = True
-
-    # This is communication latency between l2 & l3
-    response_latency = 15
+    # recvTimingResp serviceMSHR latency
+    response_latency = 1
 
     cache_level = 2
     enable_wayprediction = False
 
 class L3Cache(Cache):
-    mshrs = 128
+    mshrs = 64
+    write_buffers = 64
     tgts_per_mshr = 20
     clusivity='mostly_excl'
     writeback_clean = False
 
     # aligned latency:
-    tag_latency = 2
-    data_latency = 17
+    tag_latency = 4
+    data_latency = 5
     sequential_access = True
-
-    # This is L3 miss latency, which act as padding for memory controller
-
-    # 5950x L3 miss latency (rand) = 70ns, L3 hit latency = 15ns, so Mem-->L3 = 55ns (165 cycle in 3GHz)
-    # But XS's miss latency on mcf (less random) is averagely 211 on padding=112.
-    # To make XS's L3 miss latency similar to 5950x, we reduce padding from 112 to (112 - (211-165)) = 66 cycle
-    response_latency = 66
+    # recvTimingResp serviceMSHR latency
+    response_latency = 1
 
     cache_level = 3
     enable_wayprediction = False
@@ -152,3 +152,72 @@ class PageTableWalkerCache(Cache):
         is_read_only = True
         # Writeback clean lines as well
         writeback_clean = True
+
+
+class L1ToL2Bus(CoherentXBar):
+    # 256-bit crossbar by default
+    width = 32 # half one cacheline
+
+    # Assume that most of this is covered by the cache latencies, with
+    # no more than a single pipeline stage for any packet.
+    frontend_latency = 1 # l1 -> l2 req additional latency
+    forward_latency = 2 # l1 -> l2 req/snoop latency
+    response_latency = 2 # l2 -> l1 resp latency
+    snoop_response_latency = 1
+
+    # Use a snoop-filter by default, and set the latency to zero as
+    # the lookup is assumed to overlap with the frontend latency of
+    # the crossbar
+    snoop_filter = SnoopFilter(lookup_latency = 0)
+
+    # This specialisation of the coherent crossbar is to be considered
+    # the point of unification, it connects the dcache and the icache
+    # to the first level of unified cache.
+    point_of_unification = True
+
+class L2ToL3Bus(CoherentXBar):
+    # 256-bit crossbar by default
+    width = 32
+
+    # Assume that most of this is covered by the cache latencies, with
+    # no more than a single pipeline stage for any packet.
+    frontend_latency = 1
+    forward_latency = 4
+    response_latency = 4
+    snoop_response_latency = 1
+
+    # Use a snoop-filter by default, and set the latency to zero as
+    # the lookup is assumed to overlap with the frontend latency of
+    # the crossbar
+    snoop_filter = SnoopFilter(lookup_latency = 0)
+
+    # This specialisation of the coherent crossbar is to be considered
+    # the point of unification, it connects the dcache and the icache
+    # to the first level of unified cache.
+    point_of_unification = True
+
+class L3ToMemBus(CoherentXBar):
+    # 128-bit crossbar by default
+    width = 32
+
+    # A handful pipeline stages for each portion of the latency
+    # contributions.
+    frontend_latency = 1
+    forward_latency = 29
+    response_latency = 29
+    snoop_response_latency = 4
+
+    # Use a snoop-filter by default
+    snoop_filter = SnoopFilter(lookup_latency = 1)
+
+    # This specialisation of the coherent crossbar is to be considered
+    # the point of coherency, as there are no (coherent) downstream
+    # caches.
+    point_of_coherency = True
+
+    # This specialisation of the coherent crossbar is to be considered
+    # the point of unification, it connects the dcache and the icache
+    # to the first level of unified cache. This is needed for systems
+    # without caches where the SystemXBar is also the point of
+    # unification.
+    point_of_unification = True

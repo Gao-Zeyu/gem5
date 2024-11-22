@@ -66,6 +66,10 @@ class MSHR;
  */
 class Cache : public BaseCache
 {
+  private:
+    Tick cur_tick = MaxTick;
+    unsigned cur_resp = 0;
+
   protected:
     /**
      * This cache should allocate a block on a line-sized write miss.

@@ -134,8 +134,8 @@ class PredALU(FUDesc):
     count = 1
 
 class ReadPort(FUDesc):
-    opList = [ OpDesc(opClass='MemRead', opLat=2), # actually execute cycle = 2+2 (2 is in rubycache)
-               OpDesc(opClass='FloatMemRead', opLat=2),
+    opList = [ OpDesc(opClass='MemRead', opLat=1), # actually execute cycle = 1+3
+               OpDesc(opClass='FloatMemRead', opLat=1),
                OpDesc(opClass='VectorUnitStrideLoad', opLat=3),
                OpDesc(opClass='VectorSegUnitStrideLoad', opLat=3),
                OpDesc(opClass='VectorUnitStrideMaskLoad', opLat=3),
@@ -148,8 +148,8 @@ class ReadPort(FUDesc):
                OpDesc(opClass='VectorWholeRegisterLoad', opLat=3)]
 
 class WritePort(FUDesc):
-    opList = [ OpDesc(opClass='MemWrite', opLat=2),
-               OpDesc(opClass='FloatMemWrite', opLat=3),
+    opList = [ OpDesc(opClass='MemWrite', opLat=4),
+               OpDesc(opClass='FloatMemWrite', opLat=4),
                OpDesc(opClass='VectorUnitStrideStore'),
                OpDesc(opClass='VectorSegUnitStrideStore'),
                OpDesc(opClass='VectorUnitStrideMaskStore'),

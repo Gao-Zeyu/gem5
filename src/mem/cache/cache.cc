@@ -901,6 +901,20 @@ Cache::serviceMSHRTargets(MSHR *mshr, const PacketPtr pkt, CacheBlk *blk)
             tgt_pkt->headerDelay = tgt_pkt->payloadDelay = 0;
             DPRINTF(Cache, "Scheduling %#lx to response to sender %#lx at tick %lu\n",
                     tgt_pkt->getAddr(), tgt_pkt->senderState, completion_time);
+            
+            unsigned additional_cycle;
+            if (cur_tick != curTick()) {
+                // new cycle
+                stats.respond.sample(cur_resp);
+                cur_resp = 1;
+                cur_tick = curTick();
+                additional_cycle = 0;
+            } else {
+                // old cycle
+                additional_cycle = cur_resp * 4; // simulate replayQ -> loadpipe
+                cur_resp++;
+            }
+            completion_time += cyclesToTicks(Cycles(additional_cycle));
             cpuSidePort.schedTimingResp(tgt_pkt, completion_time);
             break;
 

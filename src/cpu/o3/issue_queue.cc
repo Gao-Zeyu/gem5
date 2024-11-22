@@ -1041,7 +1041,7 @@ uint32_t
 Scheduler::getCorrectedOpLat(const DynInstPtr& inst)
 {
     uint32_t oplat = opExecTimeTable[inst->opClass()];
-    oplat += inst->isLoad() ? 2 : 0;
+    oplat += inst->isLoad() ? 3 : 0;
     return oplat;
 }
 
