@@ -175,7 +175,9 @@ Addr
 DefaultFTB::getIndex(Addr instPC)
 {
     // Need to shift PC over by the word offset.
-    return (instPC >> instShiftAmt) & idxMask;
+    // return (instPC >> instShiftAmt) & idxMask;
+    Addr idx = ((instPC >> instShiftAmt) ^ (instPC >> (tagShiftAmt)));
+    return idx & idxMask;
 }
 
 inline
