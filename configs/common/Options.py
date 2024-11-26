@@ -271,6 +271,20 @@ def addCommonOptions(parser, configure_xiangshan=False):
                         "available subdatabase: basic, tage, ras, loop")
     parser.add_argument("--disable-sc", default=False, action="store_true",
                         help="enable sc (only for ftb branch predictor)")
+
+    parser.add_argument("--sc-opened-x1", default=1, action="store", type=int,
+                        help="sc opened, need to close, +x1")
+    parser.add_argument("--sc-opened-x2", default=5, action="store", type=int,
+                        help="sc opened, need to close, +x2")
+    parser.add_argument("--sc-opened-x3", default=30, action="store", type=int,
+                        help="sc opened, need to close, +x3")
+    parser.add_argument("--sc-opened-y", default=50, action="store", type=int,
+                        help="sc opened, need to keep open, -y")
+    parser.add_argument("--sc-closed-x", default=1, action="store", type=int,
+                        help="sc closed, need to keep close, +x")
+    parser.add_argument("--sc-closed-y", default=30, action="store", type=int,
+                        help="sc closed, need to open, -y")
+
     parser.add_argument("--enable-loop-buffer", default=False, action="store_true",
                         help="enable loop buffer (only for ftb branch predictor)")
     parser.add_argument("--enable-loop-predictor", default=False, action="store_true",

@@ -182,6 +182,19 @@ class FTBTAGE : public TimedBaseFTBPredictor
     std::vector<Addr> tageTag;
 
     bool enableSC;
+    unsigned scOpenedX1;
+    unsigned scOpenedX2;
+    unsigned scOpenedX3;
+    unsigned scOpenedY;
+    unsigned scClosedX;
+    unsigned scClosedY;
+    int scCloseConfCounter {0};
+    const int scCloseMaxThres {500};
+    const int scCloseMinThres {-500};
+    uint64_t lastUpdateTick {0};
+    bool scClosed();
+    void scSatIncrement(int x, int brId);
+    void scSatDecrement(int x, int brId);
 
     struct TageBankStats : public statistics::Group {
         statistics::Distribution predTableHits;
@@ -214,6 +227,7 @@ class FTBTAGE : public TimedBaseFTBPredictor
 
         statistics::Scalar scAgreeAtPred;
         statistics::Scalar scAgreeAtCommit;
+        statistics::Scalar scAgreeButWrongAtCommit;
         statistics::Scalar scDisagreeAtPred;
         statistics::Scalar scDisagreeAtCommit;
         statistics::Scalar scConfAtPred;
@@ -226,6 +240,16 @@ class FTBTAGE : public TimedBaseFTBPredictor
         statistics::Scalar scUsedAtCommit;
         statistics::Scalar scCorrectTageWrong;
         statistics::Scalar scWrongTageCorrect;
+        statistics::Scalar scClosedTicks;
+        statistics::Scalar scOpenedTicks;
+        statistics::Scalar scOpenedAgreeCorrect;
+        statistics::Scalar scOpenedAgreeWrong;
+        statistics::Scalar scOpenedDisagreeCorrect;
+        statistics::Scalar scOpenedDisagreeWrong;
+        statistics::Scalar scClosedTageCorrect;
+        statistics::Scalar scClosedTageWrong;
+        statistics::Scalar scSwitchToOpen;
+        statistics::Scalar scSwitchToClose;
 
         int bankIdx;
         int numPredictors;
@@ -318,6 +342,8 @@ public:
         std::vector<FoldedHist> getFoldedHist();
 
         std::vector<SCPrediction> getPredictions(Addr pc, std::vector<TagePrediction> &tagePreds);
+
+        std::vector<SCPrediction> getEmptyPredictions();
 
         void update(Addr pc, SCMeta meta, std::vector<bool> needToUpdates, std::vector<bool> actualTakens);
 

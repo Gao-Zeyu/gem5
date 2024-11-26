@@ -9,6 +9,7 @@
 #include "base/trace.hh"
 #include "cpu/o3/dyn_inst.hh"
 #include "cpu/pred/ftb/stream_common.hh"
+#include "debug/DynCloseSC.hh"
 #include "debug/FTBTAGE.hh"
 
 namespace gem5 {
@@ -28,6 +29,12 @@ FTBTAGE::FTBTAGE(const Params& p)
       numTablesToAlloc(p.numTablesToAlloc),
       numBr(p.numBr),
       enableSC(p.enableSC),
+      scOpenedX1(p.scOpenedX1),
+      scOpenedX2(p.scOpenedX2),
+      scOpenedX3(p.scOpenedX3),
+      scOpenedY(p.scOpenedY),
+      scClosedX(p.scClosedX),
+      scClosedY(p.scClosedY),
       sc(p.numBr, this)
 {
     tageBankStats = new TageBankStats * [numBr];
@@ -232,13 +239,21 @@ FTBTAGE::putPCHistory(Addr stream_start, const bitset &history, std::vector<Full
 
     // sc prediction
     if (enableSC) {
-        auto scPreds = sc.getPredictions(stream_start, preds);
-        for (int i = 0; i < numBr; ++i) {
-            takens[i] = scPreds[i].scPred;
+        if (!scClosed()){
+            auto scPreds = sc.getPredictions(stream_start, preds);
+            for (int i = 0; i < numBr; ++i) {
+                takens[i] = scPreds[i].scPred; // scPreds change the result HERE!
+            }
+            meta.scMeta.scPreds = scPreds;
+            // DPRINTF(DynCloseSC, "sc opened, predicted\n");
+        } else {
+            meta.scMeta.scPreds = sc.getEmptyPredictions();
+            // DPRINTF(DynCloseSC, "sc closed, do not predict\n");
         }
-        meta.scMeta.scPreds = scPreds;
+        // Even close sc now, it's hist must be update.
         meta.scMeta.indexFoldedHist = sc.getFoldedHist();
     }
+
     assert(getDelay() < stagePreds.size());
     for (int s = getDelay(); s < stagePreds.size(); ++s) {
         // assume that ftb entry is provided in stagePreds
@@ -417,6 +432,7 @@ FTBTAGE::update(const FetchStream &entry)
                 stat->updateTableMispreds[pred.table]++;
             }
         }
+
         assert(!this_cond_mispred || ftb_entry.slots[b].condValid());
         // update useful reset counter
         bool use_alt_on_main_found_correct = pred.useAlt && pred.mainFound && mainTaken == this_cond_actually_taken;
@@ -499,7 +515,7 @@ FTBTAGE::update(const FetchStream &entry)
         }
         if (enableDB) {
             TageMissTrace t;
-            if (enableSC) {
+            if (enableSC && !scClosed()) {
                 t.set(startAddr, ftb_entry.slots[b].pc, b, phyBrIdx, mainFound, pred.mainCounter,
                     pred.mainUseful, pred.altCounter, pred.table, pred.index, getBaseTableIndex(startAddr),
                     pred.tag, pred.useAlt, pred.taken, this_cond_actually_taken, allocSuccess, allocFailure,
@@ -516,9 +532,54 @@ FTBTAGE::update(const FetchStream &entry)
     }
 
     // update sc
-    if (enableSC) {
-        sc.update(startAddr, scMeta, need_to_update, actualTakens);
+    if (enableSC && !scClosed()) {
+       sc.update(startAddr, scMeta, need_to_update, actualTakens);
     }
+
+    if (enableSC) {
+        for (int b = 0; b < numBr; b++) {
+            if (!need_to_update[b]) {
+                continue;
+            }
+            DPRINTF(DynCloseSC, "lastUpdateTick: %ld, curTick: %ld, %s\n",
+                lastUpdateTick, curTick(), scClosed() ? "scClosed" : "scOpened");
+            TagePrediction pred = preds[b];
+            auto stat = tageBankStats[b];
+            bool this_cond_actually_taken = entry.exeTaken && entry.exeBranchInfo == ftb_entry.slots[b];
+            if (scClosed()) {
+                stat->scClosedTicks += curTick() - lastUpdateTick + 1;
+                if (pred.taken == this_cond_actually_taken) {
+                    scSatIncrement(scClosedX, b);
+                    stat->scClosedTageCorrect++;
+                } else {
+                    scSatDecrement(scClosedY, b);
+                    stat->scClosedTageWrong++;
+                }
+            } else {
+                stat->scOpenedTicks += curTick() - lastUpdateTick + 1;
+                if (pred.taken == scMeta.scPreds[b].scPred && pred.taken == this_cond_actually_taken) {
+                    scSatIncrement(scOpenedX1, b);
+                    stat->scOpenedAgreeCorrect++;
+                } else if (pred.taken == scMeta.scPreds[b].scPred && pred.taken != this_cond_actually_taken) {
+                    scSatIncrement(scOpenedX2, b);
+                    stat->scOpenedAgreeWrong++;
+                } else if (pred.taken != scMeta.scPreds[b].scPred && pred.taken == this_cond_actually_taken) {
+                    scSatIncrement(scOpenedX3, b);
+                    stat->scOpenedDisagreeWrong++;
+                } else {
+                    scSatDecrement(scOpenedY, b);
+                    stat->scOpenedDisagreeCorrect++;
+                }
+            }
+            if (scCloseConfCounter >= 0){
+                DPRINTF(DynCloseSC, "sc has been closed\n");
+            }
+            DPRINTF(DynCloseSC, "scCloseConfCounter: %d, %s\n",
+                scCloseConfCounter, scClosed() ? "scClosed" : "scOpened");
+            lastUpdateTick = curTick();
+        }
+    }
+
     DPRINTF(FTBTAGE, "end update\n");
 }
 
@@ -605,6 +666,43 @@ FTBTAGE::satDecrement(int min, short &counter)
         --counter;
     }
     return counter == min;
+}
+
+bool
+FTBTAGE::scClosed()
+{
+    return scCloseConfCounter >= 0;
+    // return false;
+}
+
+void
+FTBTAGE::scSatIncrement(int x, int brId)
+{
+    assert(x > 0 && scCloseMinThres + x <= scCloseMaxThres);
+    assert(scCloseConfCounter >= scCloseMinThres && scCloseConfCounter <= scCloseMaxThres);
+    if (scCloseConfCounter + x > scCloseMaxThres){
+        scCloseConfCounter = scCloseMaxThres;
+        return;
+    }
+    if (scCloseConfCounter < 0 && scCloseConfCounter + x >= 0){
+        tageBankStats[brId]->scSwitchToClose++;
+    }
+    scCloseConfCounter += x;
+}
+
+void
+FTBTAGE::scSatDecrement(int x, int brId)
+{
+    assert(x > 0 && scCloseMinThres + x <= scCloseMaxThres);
+    assert(scCloseConfCounter >= scCloseMinThres && scCloseConfCounter <= scCloseMaxThres);
+    if (scCloseConfCounter - x < scCloseMinThres){
+        scCloseConfCounter = scCloseMinThres;
+        return;
+    }
+    if (scCloseConfCounter >= 0 && scCloseConfCounter - x < 0){
+        tageBankStats[brId]->scSwitchToOpen++;
+    }
+    scCloseConfCounter -= x;
 }
 
 Addr
@@ -721,6 +819,17 @@ FTBTAGE::StatisticalCorrector::getPredictions(Addr pc, std::vector<TagePredictio
     return scPreds;
 }
 
+std::vector<FTBTAGE::StatisticalCorrector::SCPrediction>
+FTBTAGE::StatisticalCorrector::getEmptyPredictions()
+{
+    std::vector<SCPrediction> scPreds;
+    scPreds.resize(numBr);
+    for (int b = 0; b < numBr; b++) {
+        scPreds[b] = SCPrediction();
+    }
+    return scPreds;
+}
+
 std::vector<FoldedHist>
 FTBTAGE::StatisticalCorrector::getFoldedHist()
 {
@@ -821,6 +930,9 @@ FTBTAGE::StatisticalCorrector::update(Addr pc, SCMeta meta, std::vector<bool> ne
                 stat->scConfAtCommit++;
                 if (scTaken == p.tageTaken) {
                     stat->scAgreeAtCommit++;
+                    if (scTaken == !actualTaken){
+                        stat->scAgreeButWrongAtCommit++;
+                    }
                 } else {
                     stat->scDisagreeAtCommit++;
                     if (scTaken == actualTaken) {
@@ -886,6 +998,7 @@ FTBTAGE::TageBankStats::TageBankStats(statistics::Group* parent, const char *nam
     ADD_STAT(updateTableMispreds, statistics::units::Count::get(), "mispreds of each table when update"),
     ADD_STAT(scAgreeAtPred, statistics::units::Count::get(), "sc agrees with tage on prediction"),
     ADD_STAT(scAgreeAtCommit, statistics::units::Count::get(), "sc agrees with tage when update"),
+    ADD_STAT(scAgreeButWrongAtCommit, statistics::units::Count::get(), "sc agrees with tage when update but mispred"),
     ADD_STAT(scDisagreeAtPred, statistics::units::Count::get(), "sc disagrees with tage on prediction"),
     ADD_STAT(scDisagreeAtCommit, statistics::units::Count::get(), "sc disagrees with tage when update"),
     ADD_STAT(scConfAtPred, statistics::units::Count::get(), "sc is confident on prediction"),
@@ -897,7 +1010,18 @@ FTBTAGE::TageBankStats::TageBankStats(statistics::Group* parent, const char *nam
     ADD_STAT(scUsedAtPred, statistics::units::Count::get(), "sc used on prediction"),
     ADD_STAT(scUsedAtCommit, statistics::units::Count::get(), "sc used when update"),
     ADD_STAT(scCorrectTageWrong, statistics::units::Count::get(), "sc correct and tage wrong when update"),
-    ADD_STAT(scWrongTageCorrect, statistics::units::Count::get(), "sc wrong and tage correct when update")
+    ADD_STAT(scWrongTageCorrect, statistics::units::Count::get(), "sc wrong and tage correct when update"),
+    ADD_STAT(scClosedTicks, statistics::units::Count::get(), "sc closed tick num"),
+    ADD_STAT(scOpenedTicks, statistics::units::Count::get(), "sc opened tick num"),
+    ADD_STAT(scOpenedAgreeCorrect, statistics::units::Count::get(), "sc opened, agree with tage and pred correct"),
+    ADD_STAT(scOpenedAgreeWrong, statistics::units::Count::get(), "sc opened, agree with tage but mispred"),
+    ADD_STAT(scOpenedDisagreeCorrect, statistics::units::Count::get(), "sc opened, disagree with tage and correct"),
+    ADD_STAT(scOpenedDisagreeWrong, statistics::units::Count::get(), "sc opened, disagree with tage but mispred"),
+    ADD_STAT(scClosedTageCorrect, statistics::units::Count::get(), "sc closed, tage pred correct"),
+    ADD_STAT(scClosedTageWrong, statistics::units::Count::get(), "sc closed, tage pred wrong"),
+    ADD_STAT(scSwitchToOpen, statistics::units::Count::get(), "closed-to-open SC switches"),
+    ADD_STAT(scSwitchToClose, statistics::units::Count::get(), "opened-to-close SC switches")
+
 {
     predTableHits.init(0, numPredictors-1, 1);
     updateTableHits.init(0, numPredictors-1, 1);

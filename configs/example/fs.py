@@ -314,6 +314,12 @@ def build_test_system(np):
                                                     enableJumpAheadPredictor=args.enable_jump_ahead_predictor
                                                     )
                     test_sys.cpu[i].branchPred.tage.enableSC = (not args.disable_sc)
+                    test_sys.cpu[i].branchPred.tage.scOpenedX1 = args.sc_opened_x1
+                    test_sys.cpu[i].branchPred.tage.scOpenedX2 = args.sc_opened_x2
+                    test_sys.cpu[i].branchPred.tage.scOpenedX3 = args.sc_opened_x3
+                    test_sys.cpu[i].branchPred.tage.scOpenedY  = args.sc_opened_y
+                    test_sys.cpu[i].branchPred.tage.scClosedX  = args.sc_closed_x
+                    test_sys.cpu[i].branchPred.tage.scClosedY  = args.sc_closed_y
                     print("db_switches:", bp_db_switches)
                 else:
                     if enable_bp_db:

@@ -907,6 +907,12 @@ class FTBTAGE(TimedBaseFTBPredictor):
     cxx_header = "cpu/pred/ftb/ftb_tage.hh"
 
     enableSC = Param.Bool(True, "Enable SC or not")
+    scOpenedX1 = Param.Unsigned(1, "sc opened, need to close, +x1")
+    scOpenedX2 = Param.Unsigned(5, "sc opened, need to close, +x2")
+    scOpenedX3 = Param.Unsigned(30, "sc opened, need to close, +x3")
+    scOpenedY  = Param.Unsigned(50, "sc opened, need to keep open, -y")
+    scClosedX  = Param.Unsigned(1, "sc closed, need to keep close, +x")
+    scClosedY  = Param.Unsigned(30, "sc closed, need to open, -y")
     numPredictors = Param.Unsigned(4, "Number of TAGE predictors")
     tableSizes = VectorParam.Unsigned([2048]*4, "the ITTAGE T0~Tn length")
     TTagBitSizes = VectorParam.Unsigned([8]*4, "the T0~Tn entry's tag bit size")
