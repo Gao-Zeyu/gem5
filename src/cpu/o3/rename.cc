@@ -794,6 +794,8 @@ Rename::renameInsts(ThreadID tid)
 
         renameDestRegs(inst, inst->threadNumber);
 
+        cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtRename);
+
         if (inst->isAtomic() || inst->isStore()) {
             storesInProgress[tid]++;
         } else if (inst->isLoad()) {

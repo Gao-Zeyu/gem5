@@ -260,6 +260,7 @@ IssueQue::issueToFu()
             continue;
         }
         addToFu(inst);
+        cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueReadReg);
         issued++;
         if (!opPipelined[inst->opClass()]) [[unlikely]] {
             // set fu busy
@@ -434,6 +435,7 @@ IssueQue::scheduleInst()
             toIssue->push(inst);
             inst->issueportid = pi;
             scheduler->specWakeUpDependents(inst, this);
+            cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueArb);
         }
         inst->clearArbFailed();
     }
@@ -487,6 +489,8 @@ IssueQue::insert(const DynInstPtr& inst)
         instNum++;
         instNumInsert++;
     }
+
+    cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueQue);
 
     DPRINTF(Schedule, "[sn:%llu] %s insert into %s\n", inst->seqNum, enums::OpClassStrings[inst->opClass()], iqname);
     DPRINTF(Schedule, "[sn:%llu] instNum++\n", inst->seqNum);
@@ -1002,6 +1006,7 @@ Scheduler::writebackWakeup(const DynInstPtr& inst)
 {
     DPRINTF(Schedule, "[sn:%llu] was writeback\n", inst->seqNum);
     inst->setWriteback();  // clear in issueQue
+    cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtWriteVal);
     for (int i = 0; i < inst->numDestRegs(); i++) {
         auto dst = inst->renamedDestIdx(i);
         if (dst->isFixedMapping()) {
@@ -1020,6 +1025,7 @@ Scheduler::bypassWriteback(const DynInstPtr& inst)
     if (inst->issueportid >= 0) {
         inst->issueQue->portBusy[inst->issueportid] = 0;
     }
+    cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtBypassVal);
     DPRINTF(Schedule, "[sn:%llu] bypass write\n", inst->seqNum);
     for (int i = 0; i < inst->numDestRegs(); i++) {
         auto dst = inst->renamedDestIdx(i);

@@ -1114,6 +1114,7 @@ IEW::classifyInstToDispQue(ThreadID tid)
             }
 
             inst->enterDQTick = curTick();
+            cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtDispQue);
 
             insts_to_dispatch.pop_front();
             dispatched++;

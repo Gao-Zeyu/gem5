@@ -1161,6 +1161,8 @@ Commit::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+                cpu->perfCCT->updateInstPos(head_inst->seqNum, PerfRecord::AtCommit);
+                cpu->perfCCT->commitMeta(head_inst->seqNum);
                 lastCommitCycle = cpu->curCycle();
                 head_inst->printDisassemblyAndResult(cpu->name());
                 const auto &head_rv_pc = head_inst->pcState().as<RiscvISA::PCState>();
@@ -1675,14 +1677,6 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
     // Finally clear the head ROB entry.
     rob->retireHead(tid);
-
-#if TRACING_ON
-    if (debug::O3PipeView) {
-        head_inst->commitTick = curTick() - head_inst->fetchTick;
-        DPRINTF(O3PipeView, "Record commit for inst sn:%lu, commitTick=%lu\n",
-                head_inst->seqNum, head_inst->commitTick);
-    }
-#endif
 
     // If this was a store, record it for this cycle.
     if (head_inst->isStore() || head_inst->isAtomic())

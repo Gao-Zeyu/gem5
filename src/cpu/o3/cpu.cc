@@ -123,6 +123,7 @@ CPU::CPU(const BaseO3CPUParams &params)
       system(params.system),
       lastRunningCycle(curCycle()),
       archDBer(params.arch_db),
+      perfCCT(new PerfCCT(params.arch_db && params.arch_db->dumpLifetime, params.arch_db)),
       ipc_r("ipc", "", 1000, archDBer),
       cpi_r("cpi", "", 1000, archDBer),
       cpuStats(this)
