@@ -937,8 +937,8 @@ class DecoupledBPUWithFTB(BranchPredictor):
     cxx_header = "cpu/pred/ftb/decoupled_bpred.hh"
     
     # n = 2
-    ftq_size = Param.Unsigned(128, "Fetch target queue size")
-    fsq_size = Param.Unsigned(64, "Fetch stream queue size")
+    ftq_size = Param.Unsigned(256, "Fetch target queue size")
+    fsq_size = Param.Unsigned(256, "Fetch stream queue size")
     maxHistLen = Param.Unsigned(970, "The length of history")
     numBr = Param.Unsigned(2, "Number of maximum branches per entry")
     numStages = Param.Unsigned(3, "Number of stages in the pipeline")

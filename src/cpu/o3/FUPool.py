@@ -178,28 +178,28 @@ class KunminghuScheduler(Scheduler):
             IssuePort(fu=[IntALU()]),
             IssuePort(fu=[IntBRU(), IntDiv()])
         ]),
-        IssueQue(name='memIQ0' , inports=6, size=3*16, oports=[
+        IssueQue(name='memIQ0' , inports=6, size=3*32, oports=[
             IssuePort(fu=[ReadPort()]),
             IssuePort(fu=[ReadPort()]),
             IssuePort(fu=[ReadPort()])
         ]),
-        IssueQue(name='memIQ1' , inports=4, size=2*16, oports=[
+        IssueQue(name='memIQ1' , inports=4, size=2*32, oports=[
             IssuePort(fu=[WritePort()]),
             IssuePort(fu=[WritePort()])
         ]),
-        IssueQue(name='fpIQ0' , inports=2, size=18, oports=[
+        IssueQue(name='fpIQ0' , inports=2, size=32, oports=[
             IssuePort(fu=[FP_ALU(), FP_MISC(), FP_MAC()])
         ], scheduleToExecDelay=3),
-        IssueQue(name='fpIQ1' , inports=2, size=18, oports=[
+        IssueQue(name='fpIQ1' , inports=2, size=32, oports=[
             IssuePort(fu=[FP_ALU(), FP_MAC()])
         ], scheduleToExecDelay=3),
-        IssueQue(name='fpIQ2' , inports=2, size=18, oports=[
+        IssueQue(name='fpIQ2' , inports=2, size=32, oports=[
             IssuePort(fu=[FP_ALU(), FP_MAC()])
         ], scheduleToExecDelay=3),
-        IssueQue(name='fpIQ3' , inports=2, size=18, oports=[
+        IssueQue(name='fpIQ3' , inports=2, size=32, oports=[
             IssuePort(fu=[FP_ALU(), FP_MAC()])
         ], scheduleToExecDelay=3),
-        IssueQue(name='fpIQ4' , inports=2, size=18, oports=[
+        IssueQue(name='fpIQ4' , inports=2, size=32, oports=[
             IssuePort(fu=[FP_SLOW()]),
             IssuePort(fu=[FP_SLOW()]),
         ], scheduleToExecDelay=3),

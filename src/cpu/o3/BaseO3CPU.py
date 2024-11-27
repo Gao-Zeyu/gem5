@@ -132,7 +132,7 @@ class BaseO3CPU(BaseCPU):
                "Issue/Execute/Writeback delay")
     executeToWriteBackDelay = Param.Cycles(1, "Execute to issue delay")
 
-    dispWidth = Param.Unsigned(8, "Each DispQue dispatch width")
+    dispWidth = Param.Unsigned(10, "Each DispQue dispatch width")
     wbWidth = Param.Unsigned(20, "Writeback width")
 
     iewToCommitDelay = Param.Cycles(1, "Issue/Execute/Writeback to commit "
@@ -177,9 +177,9 @@ class BaseO3CPU(BaseCPU):
 
     numRobs = Param.Unsigned(1, "Number of Reorder Buffers");
 
-    numPhysIntRegs = Param.Unsigned(264,
+    numPhysIntRegs = Param.Unsigned(354,
             "Number of physical integer registers")
-    numPhysFloatRegs = Param.Unsigned(192, "Number of physical floating point "
+    numPhysFloatRegs = Param.Unsigned(384, "Number of physical floating point "
                                       "registers")
     numPhysVecRegs = Param.Unsigned(192, "Number of physical vector "
                                       "registers")
@@ -190,7 +190,7 @@ class BaseO3CPU(BaseCPU):
     numPhysCCRegs = Param.Unsigned(0, "Number of physical cc registers")
     numPhysRMiscRegs = Param.Unsigned(40, "Number of physical renameable misc registers")
 
-    numDQEntries = Param.Unsigned(18, "Number of entries in the dispQue")
+    numDQEntries = Param.Unsigned(36, "Number of entries in the dispQue")
     numROBEntries = Param.Unsigned(640, "Number of reorder buffer entries")
 
     smtNumFetchingThreads = Param.Unsigned(1, "SMT Number of Fetching Threads")
