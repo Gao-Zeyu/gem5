@@ -1152,8 +1152,8 @@ Fetch::tick()
         // Fetch each of the actively fetching threads.
         DPRINTF(Fetch, "Fetching 1st block\n");
         fetch(status_change);
-        DPRINTF(Fetch, "Fetching 2nd block\n");
-        fetch(status_change);
+        // DPRINTF(Fetch, "Fetching 2nd block\n");
+        // fetch(status_change);
     }
 
     toDecode->fetchStallReason = stallReason;
