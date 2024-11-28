@@ -183,3 +183,30 @@ jobs:
           mkdir -p $GEM5_HOME/util/xs_scripts/test_l2tlb
           cd $GEM5_HOME/util/xs_scripts/test_l2tlb
           bash ../kmh_6wide.sh  /nfs/home/share/yanyue/checkpoints/gcc13_gcb_403_61291.zstd
+
+  new_sim_script_test_gcbh:
+    runs-on: self-hosted
+    continue-on-error: false
+    name: XS-GEM5 - Test new simulation script on RV64GCBH
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build DRAMSim
+        run: |
+          export GEM5_HOME=$(pwd)
+          cd ext/dramsim3
+          git clone git@github.com:umd-memsys/DRAMSim3.git DRAMsim3
+          cd DRAMsim3 && mkdir -p build
+          cd build
+          cmake ..
+          make -j 48
+          cd $GEM5_HOME
+      - name: Build GEM5 opt
+        run: CC=gcc CXX=g++ scons build/RISCV/gem5.opt --linker=gold -j64
+      - name: XS-GEM5 - Test xiangshan.py simulation scripts
+        run: |
+          export GCBH_REF_SO="/nfs-nvme/home/share/zhenhao/ref-h/build-h/riscv64-nemu-interpreter-so"
+          export GCBH_RESTORER="/nfs-nvme/home/share/zhenhao/LibCheckpointAlpha/build/gcpt.bin"
+          export GEM5_HOME=$(pwd)
+          mkdir -p $GEM5_HOME/util/xs_scripts/test_h
+          cd $GEM5_HOME/util/xs_scripts/test_h
+          bash ../kmh_6wide_h.sh /nfs/home/share/jiaxiaoyu/H-ext-checkpoint-uniform-zstd-nosmp/uniform/payload/820000000/_820000000_.zstd

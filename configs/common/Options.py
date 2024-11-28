@@ -315,6 +315,9 @@ def addCommonOptions(parser, configure_xiangshan=False):
     parser.add_argument("--restore-rvv-cpt", action="store_true", default=False,
             help="The input checkpoint is RVV, which requires RVV restorer")
 
+    parser.add_argument("--restore-rvh-cpt", action="store_true", default=False,
+            help="The input checkpoint is RVH, which requires RVH restorer")
+
     parser.add_argument("--xiangshan-ecore", action= "store_true",
                         help="Use efficient core of xiangshan")
 
