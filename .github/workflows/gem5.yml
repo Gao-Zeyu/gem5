@@ -222,24 +222,10 @@ jobs:
           python3 -m site --user-site
           echo "System Python path:"
           python3 -c "import sys; print('\n'.join(sys.path))"
-      - name: Check Python environment
-        run: |
-          echo "Python path:"
-          which python3
-          echo "Python version:"
-          python3 --version
-          echo "PYTHONPATH:"
-          echo $PYTHONPATH
-          echo "Installed packages:"
-          pip3 list
-          pip list
-          pip list | grep pandas
-          echo "User site packages:"
-          python3 -m site --user-site
       - name: Test performance report generation
         run: |
-          # 添加用户的site-packages到PYTHONPATH
-          export PYTHONPATH=/nfs/home/ci-runner/.local/lib/python3.8/site-packages:$PYTHONPATH
+          # 添加yanyue的 Python 包路径, 包含pandas等
+          export PYTHONPATH=/nfs/home/yanyue/.local/lib/python3.10/site-packages:$PYTHONPATH
           cd /nfs/home/yanyue/workspace/gem5_data_proc
           bash example-scripts/gem5-score.sh \
             /nfs/home/yanyue/workspace/GEM5/util/xs_scripts/test/spec_gcc15_gcb_zicond_new \
