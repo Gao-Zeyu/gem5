@@ -210,6 +210,18 @@ jobs:
     name: XS-GEM5 - Test performance report generation
     steps:
       - uses: actions/checkout@v2
+      - name: Check Python environment0
+        run: |
+          echo "Current user:"
+          whoami
+          echo "Home directory:"
+          echo $HOME
+          echo "Python path:"
+          which python3
+          echo "Python user site:"
+          python3 -m site --user-site
+          echo "System Python path:"
+          python3 -c "import sys; print('\n'.join(sys.path))"
       - name: Check Python environment
         run: |
           echo "Python path:"
