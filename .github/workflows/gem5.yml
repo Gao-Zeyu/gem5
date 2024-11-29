@@ -222,12 +222,18 @@ jobs:
           python3 -m site --user-site
           echo "System Python path:"
           python3 -c "import sys; print('\n'.join(sys.path))"
+      - name: Setup gem5_data_proc environment
+        run: |
+          # 克隆数据处理仓库到 CI 工作目录
+          cd $GITHUB_WORKSPACE
+          git clone https://github.com/shinezyy/gem5_data_proc
       - name: Test performance report generation
         run: |
           # 添加yanyue的 Python 包路径, 包含pandas等
           export PYTHONPATH=/nfs/home/yanyue/.local/lib/python3.10/site-packages:$PYTHONPATH
-          cd /nfs/home/yanyue/workspace/gem5_data_proc
-          bash example-scripts/gem5-score.sh \
+          cd $GITHUB_WORKSPACE/gem5_data_proc
+          # 使用已有的数据测试报告生成
+          bash example-scripts/gem5-score-ci.sh \
             /nfs/home/yanyue/workspace/GEM5/util/xs_scripts/test/spec_gcc15_gcb_zicond_new \
             /nfs/home/yanyue/workspace/checkpoint_scripts/checkpoint_scripts/archive/spec06_gcc15_rv64gcb_zicond_O3_lto_base_nemu_single_core_NEMU_archgroup_2024-11-01-18-30/checkpoint-0-0-0/cluster-0-0.json \
             > $GITHUB_WORKSPACE/score.txt
