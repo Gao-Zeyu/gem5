@@ -171,6 +171,7 @@ jobs:
         run: |
           export GEM5_HOME=$(pwd)
           echo $GEM5_HOME
+          echo $(realpath $GEM5_HOME/README.md)
       #     cd ext/dramsim3
       #     git clone git@github.com:umd-memsys/DRAMSim3.git DRAMsim3
       #     cd DRAMsim3 && mkdir -p build
@@ -202,7 +203,7 @@ jobs:
           # 添加yanyue的 Python 包路径, 包含pandas等
           export PYTHONPATH=/nfs/home/yanyue/.local/lib/python3.10/site-packages:$PYTHONPATH
           # 每次run 会进入新的shell, 需要重新设置GEM5_HOME
-          export GEM5_HOME=$GITHUB_WORKSPACE/Gem5
+          export GEM5_HOME=$GITHUB_WORKSPACE
           cd $GITHUB_WORKSPACE/gem5_data_proc
           # 使用已有的数据spec_all生成测试报告
           bash example-scripts/gem5-score-ci.sh \
