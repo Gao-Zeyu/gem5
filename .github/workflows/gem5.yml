@@ -210,10 +210,25 @@ jobs:
     name: XS-GEM5 - Test performance report generation
     steps:
       - uses: actions/checkout@v2
+      - name: Check Python environment
+        run: |
+          echo "Python path:"
+          which python3
+          echo "Python version:"
+          python3 --version
+          echo "PYTHONPATH:"
+          echo $PYTHONPATH
+          echo "Installed packages:"
+          pip3 list
+          pip list
+          pip list | grep pandas
+          echo "User site packages:"
+          python3 -m site --user-site
       - name: Test performance report generation
         run: |
+          # 添加用户的site-packages到PYTHONPATH
+          export PYTHONPATH=/nfs/home/ci-runner/.local/lib/python3.8/site-packages:$PYTHONPATH
           cd /nfs/home/yanyue/workspace/gem5_data_proc
-          # 使用已有的数据测试报告生成
           bash example-scripts/gem5-score.sh \
             /nfs/home/yanyue/workspace/GEM5/util/xs_scripts/test/spec_gcc15_gcb_zicond_new \
             /nfs/home/yanyue/workspace/checkpoint_scripts/checkpoint_scripts/archive/spec06_gcc15_rv64gcb_zicond_O3_lto_base_nemu_single_core_NEMU_archgroup_2024-11-01-18-30/checkpoint-0-0-0/cluster-0-0.json \
