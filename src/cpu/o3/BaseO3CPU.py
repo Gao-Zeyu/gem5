@@ -58,6 +58,19 @@ class CommitPolicy(ScopedEnum):
 class ROBWalkPolicy(ScopedEnum):
     vals = [ 'Rollback', 'Replay', 'ConstCycle', 'NaiveCpt', 'ConfidentCpt' ]
 
+class PerfRecord(ScopedEnum):
+    vals = [
+        # position tick
+        'AtFetch', 'AtDecode', 'AtRename', 'AtDispQue', 'AtIssueQue', 'AtIssueArb', 'AtIssueReadReg',
+        'AtFU', 'AtBypassVal', 'AtWriteVal', 'AtCommit',
+        'Disasm', 'PC'
+    ]
+
+class PerfDetail(ScopedEnum):
+    vals = [
+        'pdst', 'psrcs', 'result', 'ldstAddr', 'cachemisslevel', 'arbfail'
+    ]
+
 class BaseO3CPU(BaseCPU):
     type = 'BaseO3CPU'
     cxx_class = 'gem5::o3::CPU'

@@ -23,6 +23,8 @@ from common import XSConfig
 from common.Caches import *
 from common import Options
 from common.FUScheduler import *
+from m5.objects import PerfRecord
+
 
 class XiangshanCore(RiscvO3CPU):
     scheduler = KunminghuScheduler()
@@ -216,6 +218,14 @@ def build_test_system(np, args):
 
     # config arch db
     if args.enable_arch_db:
+        perfCCT_cmd = "CREATE TABLE LifeTimeCommitTrace(ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+        perfCCT_cmd += PerfRecord.vals[0] + " INT NOT NULL"
+        for i in range(1, len(PerfRecord.vals)):
+            name = PerfRecord.vals[i]
+            type_str = "INT" if name.lower().startswith(('at', 'pc')) else "CHAR(20)"
+            perfCCT_cmd += "," + name + " " + type_str + " NOT NULL"
+        perfCCT_cmd += ");"
+
         test_sys.arch_db = ArchDBer(arch_db_file=args.arch_db_file)
         test_sys.arch_db.dump_from_start = args.arch_db_fromstart
         test_sys.arch_db.enable_rolling = args.enable_rolling
@@ -227,6 +237,7 @@ def build_test_system(np, args):
         test_sys.arch_db.dump_l1_miss_trace = False
         test_sys.arch_db.dump_bop_train_trace = False
         test_sys.arch_db.dump_sms_train_trace = False
+        test_sys.arch_db.dump_lifetime = False
         test_sys.arch_db.table_cmds = [
             "CREATE TABLE L1MissTrace(" \
             "ID INTEGER PRIMARY KEY AUTOINCREMENT," \
@@ -269,7 +280,6 @@ def build_test_system(np, args):
             "PFSrc INT NOT NULL," \
             "SITE TEXT);"
             ,
-
             "CREATE TABLE BOPTrainTrace(" \
             "ID INTEGER PRIMARY KEY AUTOINCREMENT," \
             "Tick INT NOT NULL," \
@@ -279,7 +289,7 @@ def build_test_system(np, args):
             "Score INT NOT NULL," \
             "Miss BOOL NOT NULL," \
             "SITE TEXT);"
-
+            ,
             "CREATE TABLE SMSTrainTrace(" \
             "ID INTEGER PRIMARY KEY AUTOINCREMENT," \
             "Tick INT NOT NULL," \
@@ -289,6 +299,8 @@ def build_test_system(np, args):
             "Conf INT NOT NULL," \
             "Miss BOOL NOT NULL," \
             "SITE TEXT);"
+            ,# perfCounter CommitTrace
+            perfCCT_cmd
         ]
 
     # config debug trace

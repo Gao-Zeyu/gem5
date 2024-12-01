@@ -1488,6 +1488,10 @@ Fetch::buildInst(ThreadID tid, StaticInstPtr staticInst,
     // Create a new DynInst from the instruction fetched.
     DynInstPtr instruction = new (arrays) DynInst(
             arrays, staticInst, curMacroop, this_pc, next_pc, seq, cpu);
+
+    cpu->perfCCT->createMeta(instruction);
+    cpu->perfCCT->updateInstPos(instruction->seqNum, PerfRecord::AtFetch);
+
     instruction->setTid(tid);
 
     instruction->setThreadState(cpu->thread[tid]);
