@@ -16,8 +16,18 @@ sqldb = args.sqldb
 tick_per_cycle = int(args.period)
 cycle_per_line = int(100 * args.zoom)
 
-stages = ['f','d','r','D','i','a','g','e','b','w','c']
-
+# stages = ['f','d','r','D','i','a','g','e','b','w','c']
+stages = ['\033[94mf',  # 蓝色
+         '\033[92md',   # 绿色
+         '\033[95mr',   # 紫色
+         '\033[96mD',   # 青色
+         '\033[91mi',   # 红色
+         '\033[33ma',   # 橙色
+         '\033[32mg',   # 浅绿色
+         '\033[36me',   # 浅青色
+         '\033[35mb',   # 浅紫色
+         '\033[34mw',   # 浅蓝色
+         '\033[31mc\033[0m']   # 浅红色，添加重置代码
 
 def non_stage():
     return '.'
