@@ -168,8 +168,8 @@ Fetch::Fetch(CPU *_cpu, const BaseO3CPUParams &params)
 
     // Get the size of an instruction.
     instSize = decoder[0]->moreBytesSize();
-
-    stallReason.resize(fetchWidth, StallReason::NoStall);
+    // stallReason size should be the same as decodeWidth,renameWidth,dispWidth
+    stallReason.resize(decodeWidth, StallReason::NoStall);
 
     firstDataBuf = new uint8_t[fetchBufferSize];
     secondDataBuf = new uint8_t[fetchBufferSize];
@@ -1866,18 +1866,16 @@ Fetch::fetch(bool &status_change)
         DPRINTF(FetchVerbose, "inst: %s\n", it->staticInst->disassemble(it->pcState().instAddr()));
     }
 
-    for (int i = 0;i < fetchWidth;i++) {
-        if (i < numInst)
-            stallReason[i] = StallReason::NoStall;
-        else {
-            if (numInst > 0) {
+    // fetch totally stalled
+    if (stall != StallReason::NoStall) {
+        setAllFetchStalls(stall);
+    } else {
+        // fetch partially stalled or no stall
+        for (int i = 0;i < stallReason.size();i++) {
+            if (i < numInst)
+                stallReason[i] = StallReason::NoStall;
+            else {
                 stallReason[i] = StallReason::FetchFragStall;
-            } else if (stall  != StallReason::NoStall) {
-                stallReason[i] = stall;
-            } else if (stalls[tid].decode && fetchQueue[tid].size() >= fetchQueueSize) {
-                stallReason[i] = fromDecode->decodeInfo[tid].blockReason;
-            } else {
-                stallReason[i] = StallReason::OtherFetchStall;
             }
         }
     }

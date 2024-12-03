@@ -1119,24 +1119,27 @@ IEW::classifyInstToDispQue(ThreadID tid)
         }
     }
 
-    if (insts_to_add == 0) {
-        dispatchStalls = fromRename->renameStallReason;
+    if (!dispatch_stalls.empty()) {
+        setAllStalls(dispatch_stalls.front());
+        dispatch_stalls.pop();
+    } else if (breakDispatch != StallReason::NoStall) {
+        setAllStalls(breakDispatch);
     } else {
-        for (int i = 0; i < renameWidth; i++) {
-            if (i < dispatched) {
+        // no totally stall, pass rename stall
+        // assert(dispatched != 0);
+        for (int i = 0; i < dispatchStalls.size(); i++) {
+            if (i < dispatched) {   // dispatch success, no stall
                 dispatchStalls.at(i) = StallReason::NoStall;
-            } else {
-                if (!dispatch_stalls.empty()) {
-                    dispatchStalls.at(i) = dispatch_stalls.front();
-                    dispatch_stalls.pop();
-                } else if (breakDispatch != StallReason::NoStall) {
-                    dispatchStalls.at(i) = breakDispatch;
-                } else if (i >= dispatched) {
-                    dispatchStalls.at(i) = StallReason::OtherFragStall;
+            } else {    // dispatch no insts, pass rename stall
+                if (fromRename->renameStallReason.size() == 0) {    // initialize, no stall
+                    dispatchStalls.at(i) = StallReason::NoStall;
+                } else {    // not dispatch initialize, pass rename stall
+                    dispatchStalls.at(i) = fromRename->renameStallReason.at(i);
                 }
             }
         }
     }
+
 
     for (int i = 0;i < dispatchStalls.size();i++) {
         DPRINTF(IEW,"[tid:%i] dispatchStalls[%d]=%d\n", tid, i, dispatchStalls.at(i));

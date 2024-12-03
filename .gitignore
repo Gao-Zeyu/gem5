@@ -41,3 +41,5 @@ configs/dram/lowp_sweep.cfg
 /ext/dramsim3/DRAMsim3/
 .cache
 util/xs_scripts/test/
+run_fs.sh
+.vscode/
