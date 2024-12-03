@@ -43,6 +43,7 @@ from m5.objects import *
 from m5.util import *
 from common.Benchmarks import *
 from common import ObjectList
+from common.Caches import *
 
 # Populate to reflect supported os types per target ISA
 os_types = { 'mips'  : [ 'linux' ],
@@ -64,7 +65,7 @@ class CowIdeDisk(IdeDisk):
     def childImage(self, ci):
         self.image.child.image_file = ci
 
-class MemBus(SystemXBar):
+class MemBus(L3ToMemBus):
     badaddr_responder = BadAddr()
     default = Self.badaddr_responder.pio
 

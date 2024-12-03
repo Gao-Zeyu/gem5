@@ -1033,6 +1033,14 @@ class LSQ
 
     /** Number of Threads. */
     ThreadID numThreads;
+
+  private:
+    uint64_t ldreq_seqNum=0;
+  public:
+    uint64_t allocateLoadReqSeqNum() {
+        ldreq_seqNum++;
+        return ldreq_seqNum;
+    }
 };
 
 } // namespace o3

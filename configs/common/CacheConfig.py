@@ -122,8 +122,8 @@ def config_cache(options, system):
         # same clock as the CPUs.
         system.l2_caches = [l2_cache_class(clk_domain=system.cpu_clk_domain,
                                            **_get_cache_opts('l2', options)) for i in range(options.num_cpus)]
-        system.tol2bus_list = [L2XBar(
-            clk_domain=system.cpu_clk_domain, width=256) for i in range(options.num_cpus)]
+        system.tol2bus_list = [L1ToL2Bus(
+            clk_domain=system.cpu_clk_domain) for i in range(options.num_cpus)]
         for i in range(options.num_cpus):
             # system.l2_caches.append(l2_cache_class(clk_domain=system.cpu_clk_domain,
             #                        **_get_cache_opts('l2', options)))
@@ -131,7 +131,7 @@ def config_cache(options, system):
             # system.tol2bus_list.append(L2XBar(clk_domain = system.cpu_clk_domain, width=256))
             system.l2_caches[i].cpu_side = system.tol2bus_list[i].mem_side_ports
             system.tol2bus_list[i].snoop_filter.max_capacity = "16MB"
-            if options.kmh_align:
+            if system.l2_caches[i].prefetcher != NULL and options.kmh_align:
                 assert options.l2_hwp_type == 'L2CompositeWithWorkerPrefetcher'
                 system.l2_caches[i].prefetcher.enable_cmc = True
                 system.l2_caches[i].prefetcher.enable_bop = True
@@ -162,18 +162,10 @@ def config_cache(options, system):
                 system.l2_caches[i].response_latency = 66
                 system.l2_caches[i].writeback_clean = False
 
-            system.membus.frontend_latency = 0
-            system.membus.response_latency = 0
-            system.membus.forward_latency = 0
-            system.membus.header_latency = 0
-            system.membus.snoop_response_latency = 0
-            system.membus.width = 128 # byte per cycle
-
-
         if options.l3cache:
             system.l3 = L3Cache(clk_domain=system.cpu_clk_domain,
                                         **_get_cache_opts('l3', options))
-            system.tol3bus = L2XBar(clk_domain=system.cpu_clk_domain, width=256)
+            system.tol3bus = L2ToL3Bus(clk_domain=system.cpu_clk_domain)
             system.tol3bus.snoop_filter.max_capacity = "32MB"
             system.l3.cpu_side = system.tol3bus.mem_side_ports
             system.l3.mem_side = system.membus.cpu_side_ports

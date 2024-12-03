@@ -495,6 +495,8 @@ class LSQUnit
 
     BaseMMU *getMMUPtr();
 
+    uint64_t allocateLoadReqSeqNum();
+
   private:
     System *system;
 
@@ -685,6 +687,8 @@ class LSQUnit
         statistics::Scalar sbufferEvictDuetoFull;
         statistics::Scalar sbufferEvictDuetoSQFull;
         statistics::Scalar sbufferEvictDuetoTimeout;
+        statistics::Scalar sbufferPartialForward;
+        statistics::Scalar sbufferFullyForward;
 
         /** Distribution of cycle latency between the first time a load
          * is issued and its completion */

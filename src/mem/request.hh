@@ -566,6 +566,8 @@ class Request
 
     bool _isHInst = false;
 
+    uint64_t seqNum = 0;
+
   public:
 
     /**
@@ -653,6 +655,14 @@ class Request
     void setReqNum(int num)
     {
         reqNum = num;
+    }
+
+    void setReqSeqNum(uint64_t sn) {
+        seqNum = sn;
+    }
+
+    uint64_t getSeqNum() {
+        return seqNum;
     }
 
     /**

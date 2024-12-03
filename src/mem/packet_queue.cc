@@ -175,6 +175,7 @@ PacketQueue::schedSendEvent(Tick when)
         for (auto it = transmitList.begin(); it != transmitList.end(); ++it) {
             if (it->pkt->isSendRightAway()) {
                 sendRightAway = true;
+                break;
             }
         }
 

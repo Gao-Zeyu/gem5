@@ -51,6 +51,7 @@
 #include "base/trace.hh"
 #include "base/types.hh"
 #include "debug/ArchDB.hh"
+#include "debug/CPUReqTrace.hh"
 #include "debug/Cache.hh"
 #include "debug/CacheComp.hh"
 #include "debug/CachePort.hh"
@@ -518,6 +519,11 @@ BaseCache::tryAccessTag(PacketPtr pkt)
 void
 BaseCache::recvTimingReq(PacketPtr pkt)
 {
+    if (debug::CPUReqTrace) [[unlikely]] {
+        if (pkt->req->getSeqNum()) {
+            DPRINTF(CPUReqTrace, "[reqTrace %llu] request at L%d\n", pkt->req->getSeqNum(), cacheLevel);
+        }
+    }
 
     if (pkt->isStorePFTrain()) {
         // send store prefetch train request
@@ -738,6 +744,13 @@ BaseCache::handleUncacheableWriteResp(PacketPtr pkt)
 void
 BaseCache::recvTimingResp(PacketPtr pkt)
 {
+
+    if (debug::CPUReqTrace) [[unlikely]] {
+        if (pkt->req->getSeqNum()) {
+            DPRINTF(CPUReqTrace, "[reqTrace %llu] response at L%d\n", pkt->req->getSeqNum(), cacheLevel);
+        }
+    }
+
     assert(pkt->isResponse());
 
     // all header delay should be paid for by the crossbar, unless
