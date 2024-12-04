@@ -253,19 +253,19 @@ IEW::IEWStats::IEWStats(CPU *cpu)
 
     fetchStallReason
             .init(NumStallReasons)
-            .flags(statistics::total);
+            .flags(statistics::total | statistics::pdf);
 
     decodeStallReason
             .init(NumStallReasons)
-            .flags(statistics::total);
+            .flags(statistics::total | statistics::pdf);
 
     renameStallReason
             .init(NumStallReasons)
-            .flags(statistics::total);
+            .flags(statistics::total | statistics::pdf);
 
     dispatchStallReason
             .init(NumStallReasons)
-            .flags(statistics::total);
+            .flags(statistics::total | statistics::pdf);
 
     std::map <StallReason, const char*> stallReasonStr = {
         {StallReason::NoStall, "NoStall"},

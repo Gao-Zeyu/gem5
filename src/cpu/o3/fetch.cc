@@ -237,7 +237,15 @@ Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
     ADD_STAT(rate, statistics::units::Rate<
                     statistics::units::Count, statistics::units::Cycle>::get(),
              "Number of inst fetches per cycle",
-             insts / cpu->baseStats.numCycles)
+             insts / cpu->baseStats.numCycles),
+    ADD_STAT(fetchStatusDist, statistics::units::Count::get(),
+             "Distribution of fetch status"),
+    ADD_STAT(decodeStalls, statistics::units::Count::get(),
+             "Number of decode stalls"),
+    ADD_STAT(decodeStallRate, statistics::units::Rate<
+                    statistics::units::Count, statistics::units::Cycle>::get(),
+             "Number of decode stalls per cycle",
+             decodeStalls / cpu->baseStats.numCycles)
 {
         icacheStallCycles
             .prereq(icacheStallCycles);
@@ -285,6 +293,25 @@ Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
         branchRate
             .flags(statistics::total);
         rate
+            .flags(statistics::total);
+        fetchStatusDist
+            .init(NumFetchStatus)
+            .flags(statistics::pdf | statistics::total);
+        fetchStatusDist.subname(0, "Running");
+        fetchStatusDist.subname(1, "Idle");
+        fetchStatusDist.subname(2, "Squashing");
+        fetchStatusDist.subname(3, "Blocked");
+        fetchStatusDist.subname(4, "Fetching");
+        fetchStatusDist.subname(5, "TrapPending");
+        fetchStatusDist.subname(6, "QuiescePending");
+        fetchStatusDist.subname(7, "ItlbWait");
+        fetchStatusDist.subname(8, "IcacheWaitResponse");
+        fetchStatusDist.subname(9, "IcacheWaitRetry");
+        fetchStatusDist.subname(10, "IcacheAccessComplete");
+        fetchStatusDist.subname(11, "NoGoodAddr");
+        decodeStalls
+            .prereq(decodeStalls);
+        decodeStallRate
             .flags(statistics::total);
 }
 void
@@ -1240,12 +1267,32 @@ Fetch::tick()
             tid_itr = activeThreads->begin();
     }
 
-    for (int i = 0;i < toDecode->fetchStallReason.size();i++) {
-        if (i < insts_to_decode) {
-            toDecode->fetchStallReason[i] = StallReason::NoStall;
-        } else if(stalls[*tid_itr].decode) {
-            toDecode->fetchStallReason[i] = fromDecode->decodeInfo[*tid_itr].blockReason;
+    // fetch totally stalled
+    if (stalls[*tid_itr].decode) {
+        setAllFetchStalls(fromDecode->decodeInfo[*tid_itr].blockReason);
+    } else if (insts_to_decode == 0) {
+        if (stallReason[0] != StallReason::NoStall) {   //  previously set stall reason
+            setAllFetchStalls(stallReason[0]);
+        } else {
+            setAllFetchStalls(StallReason::OtherFetchStall);
         }
+    } else {
+        // fetch partially stalled or no stall
+        for (int i = 0;i < stallReason.size();i++) {
+            if (i < insts_to_decode)
+                stallReason[i] = StallReason::NoStall;
+            else {
+                stallReason[i] = StallReason::FetchFragStall;
+            }
+        }
+    }
+
+    toDecode->fetchStallReason = stallReason;
+
+    fetchStats.fetchStatusDist[fetchStatus[*tid_itr]]++;
+
+    if (stalls[*tid_itr].decode) {
+        fetchStats.decodeStalls++;
     }
 
     // If there was activity this cycle, inform the CPU of it.
@@ -1866,18 +1913,8 @@ Fetch::fetch(bool &status_change)
         DPRINTF(FetchVerbose, "inst: %s\n", it->staticInst->disassemble(it->pcState().instAddr()));
     }
 
-    // fetch totally stalled
     if (stall != StallReason::NoStall) {
         setAllFetchStalls(stall);
-    } else {
-        // fetch partially stalled or no stall
-        for (int i = 0;i < stallReason.size();i++) {
-            if (i < numInst)
-                stallReason[i] = StallReason::NoStall;
-            else {
-                stallReason[i] = StallReason::FetchFragStall;
-            }
-        }
     }
 
     if (enableLoopBuffer && isFTBPred()) {
