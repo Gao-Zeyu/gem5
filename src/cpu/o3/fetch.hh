@@ -185,7 +185,8 @@ class Fetch
         IcacheWaitResponse,
         IcacheWaitRetry,
         IcacheAccessComplete,
-        NoGoodAddr
+        NoGoodAddr,
+        NumFetchStatus
     };
 
   private:
@@ -645,6 +646,12 @@ class Fetch
         statistics::Formula branchRate;
         /** Number of instruction fetched per cycle. */
         statistics::Formula rate;
+        /** Distribution of fetch status */
+        statistics::Vector fetchStatusDist;
+        /** Number of decode stalls */
+        statistics::Scalar decodeStalls;
+        /** Number of decode stalls per cycle */
+        statistics::Formula decodeStallRate;
     } fetchStats;
 
     SquashVersion localSquashVer;
