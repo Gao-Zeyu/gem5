@@ -67,7 +67,9 @@ enum StallReason {
     BpStall,  // BS, bad speculation: Frontend is squashed
     IntStall,  // F
     TrapStall,  // F
+    FTQBubble,  // F
     FetchFragStall,  // F
+    OtherFetchStall,  // F
     OtherFragStall,
     SquashStall,  // BS
     FetchBufferInvalid,  // Never used
@@ -100,7 +102,6 @@ enum StallReason {
     ResumeUnblock,  // B
     CommitSquash,  // BS
     OtherStall,  // B
-    OtherFetchStall,  // F
     NumStallReasons
 };
 
