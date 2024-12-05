@@ -299,7 +299,7 @@ IEW::IEWStats::IEWStats(CPU *cpu)
         {StallReason::CommitSquash, "CommitSquash"},
         {StallReason::OtherStall, "OtherStall"},
         {StallReason::OtherFetchStall, "OtherFetchStall"},
-
+        {StallReason::FTQBubble, "FTQBubble"},
         {StallReason::MemDQBandwidth, "MemDQBandwidth"},
         {StallReason::FVDQBandwidth, "FVDQBandwidth"},
         {StallReason::IntDQBandwidth, "IntDQBandwidth"},

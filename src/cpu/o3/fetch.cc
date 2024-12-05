@@ -297,18 +297,25 @@ Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
         fetchStatusDist
             .init(NumFetchStatus)
             .flags(statistics::pdf | statistics::total);
-        fetchStatusDist.subname(0, "Running");
-        fetchStatusDist.subname(1, "Idle");
-        fetchStatusDist.subname(2, "Squashing");
-        fetchStatusDist.subname(3, "Blocked");
-        fetchStatusDist.subname(4, "Fetching");
-        fetchStatusDist.subname(5, "TrapPending");
-        fetchStatusDist.subname(6, "QuiescePending");
-        fetchStatusDist.subname(7, "ItlbWait");
-        fetchStatusDist.subname(8, "IcacheWaitResponse");
-        fetchStatusDist.subname(9, "IcacheWaitRetry");
-        fetchStatusDist.subname(10, "IcacheAccessComplete");
-        fetchStatusDist.subname(11, "NoGoodAddr");
+
+        std::map<Fetch::ThreadStatus, const char*> fetchStatusStr = {
+            {Running, "Running"},
+            {Idle, "Idle"},
+            {Squashing, "Squashing"},
+            {Blocked, "Blocked"},
+            {Fetching, "Fetching"},
+            {TrapPending, "TrapPending"},
+            {QuiescePending, "QuiescePending"},
+            {ItlbWait, "ItlbWait"},
+            {IcacheWaitResponse, "IcacheWaitResponse"},
+            {IcacheWaitRetry, "IcacheWaitRetry"},
+            {IcacheAccessComplete, "IcacheAccessComplete"},
+            {NoGoodAddr, "NoGoodAddr"}
+        };
+
+        for (int i = 0; i < NumFetchStatus; i++) {
+            fetchStatusDist.subname(i, fetchStatusStr[static_cast<Fetch::ThreadStatus>(i)]);
+        }
         decodeStalls
             .prereq(decodeStalls);
         decodeStallRate
@@ -780,6 +787,7 @@ Fetch::fetchCacheLine(Addr vaddr, ThreadID tid, Addr pc)
 
         // Initiate translation of the icache block
         fetchStatus[tid] = ItlbWait;
+        setAllFetchStalls(StallReason::ITlbStall);
         FetchTranslation *trans = new FetchTranslation(this);
         cpu->mmu->translateTiming(mem_req, cpu->thread[tid]->getTC(),
                                   trans, BaseMMU::Execute);
@@ -1265,9 +1273,9 @@ Fetch::tick()
     }
 
     // fetch totally stalled
-    if (stalls[*tid_itr].decode) {
+    if (stalls[*tid_itr].decode) { // If decode stalled, use decode's stall reason
         setAllFetchStalls(fromDecode->decodeInfo[*tid_itr].blockReason);
-    } else if (insts_to_decode == 0) {
+    } else if (insts_to_decode == 0) {  // fetch stalled
         if (stallReason[0] != StallReason::NoStall) {   //  previously set stall reason
             setAllFetchStalls(stallReason[0]);
         } else {
@@ -1275,7 +1283,7 @@ Fetch::tick()
         }
     } else {
         // fetch partially stalled or no stall
-        for (int i = 0;i < stallReason.size();i++) {
+        for (int i = 0; i < stallReason.size(); i++) {
             if (i < insts_to_decode)
                 stallReason[i] = StallReason::NoStall;
             else {
@@ -1620,12 +1628,14 @@ Fetch::fetch(bool &status_change)
         if (isStreamPred()) {
             if (!dbsp->fetchTargetAvailable()) {
                 DPRINTF(Fetch, "Skip fetch when FTQ head is not available\n");
+                setAllFetchStalls(StallReason::FTQBubble);
                 return;
             }
         } else if (isFTBPred()) {
             if (!dbpftb->fetchTargetAvailable()) {
                 dbpftb->addFtqNotValid();
                 DPRINTF(Fetch, "Skip fetch when FTQ head is not available\n");
+                setAllFetchStalls(StallReason::FTQBubble);
                 return;
             }
         }
