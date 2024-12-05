@@ -313,7 +313,7 @@ def build_test_system(np):
                                                     enableLoopPredictor=args.enable_loop_predictor,
                                                     enableJumpAheadPredictor=args.enable_jump_ahead_predictor
                                                     )
-                    test_sys.cpu[i].branchPred.tage.enableSC = (not args.disable_sc)
+                    test_sys.cpu[i].branchPred.tage.enableSC = not args.disable_sc
                     print("db_switches:", bp_db_switches)
                 else:
                     if enable_bp_db:
