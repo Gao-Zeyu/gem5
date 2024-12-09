@@ -431,6 +431,8 @@ class BaseCache : public ClockedObject, CacheAccessor
      */
     std::unique_ptr<Packet> pendingDelete;
 
+    std::vector<Tick> sliceReadyTick;
+
     /**
      * Mark a request as in service (sent downstream in the memory
      * system), effectively making this MSHR the ordering point.
@@ -509,6 +511,8 @@ class BaseCache : public ClockedObject, CacheAccessor
      */
     Cycles calculateAccessLatency(const CacheBlk* blk, const uint32_t delay,
                                   const Cycles lookup_lat) const;
+
+    Tick calculateBusyLatenct(Tick when_ready, PacketPtr pkt);
 
     /**
      * Does all the processing necessary to perform the provided request.

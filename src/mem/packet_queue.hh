@@ -172,6 +172,9 @@ class PacketQueue : public Drainable
     Tick deferredPacketReadyTime() const
     { return transmitList.empty() ? MaxTick : transmitList.front().tick; }
 
+    Tick lastDeferredPacketReadyTime() const
+    { return transmitList.empty() ? MaxTick : transmitList.back().tick; }
+
     /**
      * Check if a packet corresponding to the same address exists in the
      * queue.
