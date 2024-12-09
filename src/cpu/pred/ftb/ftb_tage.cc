@@ -42,7 +42,7 @@ FTBTAGE::FTBTAGE(const Params& p)
     tableIndexMasks.resize(numPredictors);
     tableTagBits.resize(numPredictors);
     tableTagMasks.resize(numPredictors);
-    baseTable.resize(2048); // need modify
+    baseTable.resize(4096); // need modify
     for (unsigned int i = 0; i < p.numPredictors; ++i) {
         //initialize ittage predictor
         assert(tableSizes.size() >= numPredictors);
@@ -76,7 +76,7 @@ FTBTAGE::FTBTAGE(const Params& p)
         useAlt[i].resize(numBr, 0);
     }
     
-    enableSC = true;
+    enableSC = false;
     std::vector<TageBankStats *> statsPtr;
     for (int i = 0; i < numBr; i++) {
         statsPtr.push_back(tageBankStats[i]);
