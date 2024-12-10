@@ -9,6 +9,7 @@ from m5.objects.FUPool import *
 #  must be consistent with issue_queue.cc
 maxTotalRFPorts = (1 << 6) - 1
 # portid, priority
+# smaller value get higher priority
 def IntRD(id, p):
     # [7:6] [5:2] [1:0]
     assert id < 16

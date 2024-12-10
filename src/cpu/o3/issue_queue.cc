@@ -934,7 +934,7 @@ Scheduler::useRegfilePort(const DynInstPtr& inst, const PhysRegIdPtr& regid, int
     }
     assert(typePortId < rfPortOccupancy.size());
     if (rfPortOccupancy[typePortId].first) {
-        if (rfPortOccupancy[typePortId].second > pri) {
+        if (rfPortOccupancy[typePortId].second < pri) { // smaller is higher priority
             // inst arbitration failure
             arbFailedInsts.push_back(inst);
             DPRINTF(Schedule, "[sn:%llu] arbitration failure, typePortId %d occupied by [sn:%llu]\n", inst->seqNum, typePortId,
