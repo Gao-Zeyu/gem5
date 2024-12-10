@@ -563,7 +563,8 @@ DecoupledBPUWithFTB::DBPFTBStats::DBPFTBStats(statistics::Group* parent, unsigne
     ADD_STAT(controlCommitSquashOfUncond, statistics::units::Count::get(), "control squash of uncond branch at commit"),
     ADD_STAT(controlCommitSquashOfUncondDirect, statistics::units::Count::get(), "control squash of uncond direct branch at commit"),
     ADD_STAT(controlCommitSquashOfUncondIndirect, statistics::units::Count::get(), "control squash of indirect branch at commit"),
-    ADD_STAT(controlCommitSquashOfUncondReturn, statistics::units::Count::get(), "control squash of return branch at commit")
+    ADD_STAT(controlCommitSquashOfUncondReturn, statistics::units::Count::get(), "control squash of return branch at commit"),
+    ADD_STAT(ftqEndReasonDist, statistics::units::Count::get(), "distribution of ftq end reason")
 {
     predsOfEachStage.init(numStages);
     commitPredsFromEachStage.init(numStages+1);
@@ -579,6 +580,11 @@ DecoupledBPUWithFTB::DBPFTBStats::DBPFTBStats(statistics::Group* parent, unsigne
     commitTrapSquashLatencyDist.init(1,16,1);
     commitNonControlSquashLatencyDist.init(1,16,1);
     updateLatencyDist.init(1,64,2);
+    ftqEndReasonDist.init(static_cast<int>(FTQEndReason::NUM_REASONS)).flags(statistics::pdf);
+    ftqEndReasonDist.subname(static_cast<int>(FTQEndReason::NOT_END), "not_end");
+    ftqEndReasonDist.subname(static_cast<int>(FTQEndReason::TAKEN), "taken");
+    ftqEndReasonDist.subname(static_cast<int>(FTQEndReason::SIZE_LIMIT), "size_limit");
+    ftqEndReasonDist.subname(static_cast<int>(FTQEndReason::LOOP_END), "loop_end");
 }
 
 DecoupledBPUWithFTB::BpTrace::BpTrace(FetchStream &stream, const DynInstPtr &inst, bool mispred)
@@ -798,6 +804,7 @@ DecoupledBPUWithFTB::decoupledPredict(const StaticInstPtr &inst,
         if (raw_taken) {
             if (current_loop_iter >= loop_iter - 1) {
                 run_out_of_this_entry = true;
+                dbpFtbStats.ftqEndReasonDist[static_cast<int>(FTQEndReason::LOOP_END)]++;
                 if (loop_exit) {
                     taken = false;
                     lb.tryUnpin();
@@ -809,6 +816,7 @@ DecoupledBPUWithFTB::decoupledPredict(const StaticInstPtr &inst,
     } else {
         if (taken) {
             run_out_of_this_entry = true;
+            dbpFtbStats.ftqEndReasonDist[static_cast<int>(FTQEndReason::TAKEN)]++;
         }
     }
 
@@ -826,6 +834,7 @@ DecoupledBPUWithFTB::decoupledPredict(const StaticInstPtr &inst,
         inst->advancePC(*target);
         if (target->instAddr() >= end) {
             run_out_of_this_entry = true;
+            dbpFtbStats.ftqEndReasonDist[static_cast<int>(FTQEndReason::SIZE_LIMIT)]++;
         }
     }
         DPRINTF(DecoupleBP, "Predict it %staken to %#lx\n", taken ? "" : "not ",

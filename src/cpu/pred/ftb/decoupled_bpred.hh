@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "arch/generic/pcstate.hh"
+#include "base/statistics.hh"
 #include "config/the_isa.hh"
 // #include "cpu/base.hh"
 #include "cpu/o3/cpu_def.hh"
@@ -523,10 +524,18 @@ class DecoupledBPUWithFTB : public BPredUnit
         statistics::Scalar controlCommitSquashOfUncondIndirect;
         statistics::Scalar controlCommitSquashOfUncondReturn;
 
-
+        statistics::Vector ftqEndReasonDist;
 
         DBPFTBStats(statistics::Group* parent, unsigned numStages, unsigned fsqSize);
     } dbpFtbStats;
+
+    enum class FTQEndReason {
+        NOT_END,
+        TAKEN,
+        SIZE_LIMIT,
+        LOOP_END,
+        NUM_REASONS
+    };
 
   public:
     void tick();
