@@ -157,7 +157,6 @@ class DynInst : public ExecContext, public RefCounted
   protected:
     enum Status
     {
-        IqEntry,                 /// Instruction is in the IQ
         RobEntry,                /// Instruction is in the ROB
         LsqEntry,                /// Instruction is in the LSQ
         Completed,               /// Instruction has completed
@@ -166,6 +165,7 @@ class DynInst : public ExecContext, public RefCounted
         MemDepSolved,            /// Memory dependencies are solved
         InReadyQue,              /// Instruction is in the ready queue
         Canceled,                /// Instruction is canceled
+        Scheduled,               /// Instruction is scheduled
         ArbFailed,
         Issued,                  /// Instruction has issued
         Executed,                /// Instruction has executed
@@ -849,8 +849,6 @@ class DynInst : public ExecContext, public RefCounted
     /** Returns whether or not this instruction has issued. */
     bool isIssued() const { return status[Issued]; }
 
-    /** Clears this instruction as being issued. */
-    void clearIssued() { status.reset(Issued); }
 
     /** Sets this instruction as executed. */
     void setExecuted() { status.set(Executed); }
@@ -886,13 +884,13 @@ class DynInst : public ExecContext, public RefCounted
     //Instruction Queue Entry
     //-----------------------
     /** Sets this instruction as a entry the IQ. */
-    void setInIQ() { status.set(IqEntry); }
+    void setScheduled() { status.set(Scheduled); }
 
     /** Sets this instruction as a entry the IQ. */
-    void clearInIQ() { status.reset(IqEntry); }
+    void clearScheduled() { status.reset(Scheduled); }
 
     /** Returns whether or not this instruction has issued. */
-    bool isInIQ() const { return status[IqEntry]; }
+    bool isScheduled() const { return status[Scheduled]; }
 
     /** Sets this instruction as squashed in the IQ. */
     void setSquashedInIQ() { status.set(SquashedInIQ); status.set(Squashed);}

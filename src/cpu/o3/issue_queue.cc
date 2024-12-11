@@ -234,8 +234,8 @@ IssueQue::addToFu(const DynInstPtr& inst)
         panic("%s [sn:%llu] has alreayd been issued\n", enums::OpClassStrings[inst->opClass()], inst->seqNum);
     }
     inst->setIssued();
-    scheduler->addToFU(inst);
     POPINST(inst);
+    scheduler->addToFU(inst);
 }
 
 void
@@ -248,24 +248,12 @@ IssueQue::issueToFu()
         if (!inst) {
             continue;
         }
-        if (portBusy[inst->issueportid]) {
-            DPRINTF(Schedule, "port%d busy, retry\n", inst->issueportid);
-            iqstats->portBusy[inst->issueportid]++;
-            // replay it
-            inst->setInReadyQ();
-            readyQclassify[inst->opClass()]->push(inst);  // retry
-            continue;
-        }
         if (!checkScoreboard(inst)) {
             continue;
         }
         addToFu(inst);
         cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueReadReg);
         issued++;
-        if (!opPipelined[inst->opClass()]) [[unlikely]] {
-            // set fu busy
-            portBusy[inst->issueportid] = scheduler->getOpLatency(inst) - 1;
-        }
     }
     for (int i = size; !replayQ.empty() && i < outports; i++) {
         auto inst = replayQ.front();
@@ -374,6 +362,21 @@ IssueQue::addIfReady(const DynInstPtr& inst)
 }
 
 void
+IssueQue::cancel(const DynInstPtr& inst)
+{
+    // before issued
+    assert(!inst->isIssued());
+
+    inst->setCancel();
+    if (inst->isScheduled() && !opPipelined[inst->opClass()]) {
+        inst->clearScheduled();
+        portBusy[inst->issueportid] = 0;
+    }
+
+    iqstats->canceledInst++;
+}
+
+void
 IssueQue::selectInst()
 {
     selectQ.clear();
@@ -389,6 +392,10 @@ IssueQue::selectInst()
         }
         if (!readyQ->empty()) {
             auto inst = readyQ->top();
+            if (portBusy[pi] & (1llu << scheduler->getCorrectedOpLat(inst))) {
+                continue;
+            }
+
             DPRINTF(Schedule, "[sn %ld] was selected\n", inst->seqNum);
 
             // get regfile read port
@@ -431,9 +438,16 @@ IssueQue::scheduleInst()
         } else [[likely]] {
             DPRINTF(Schedule, "[sn:%llu] no conflict, scheduled\n", inst->seqNum);
             iqstats->portissued[pi]++;
-            inst->clearInIQ();
+            inst->setScheduled();
             toIssue->push(inst);
             inst->issueportid = pi;
+
+            if (!opPipelined[inst->opClass()]) {
+                portBusy[pi] = -1ll;
+            } else if (scheduler->getCorrectedOpLat(inst) > 1) {
+                portBusy[pi] |= 1ll << scheduler->getCorrectedOpLat(inst);
+            }
+
             scheduler->specWakeUpDependents(inst, this);
             cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueArb);
         }
@@ -451,12 +465,12 @@ IssueQue::tick()
     }
     instNumInsert = 0;
 
-    for (auto& t : portBusy) {
-        t = t > 0 ? t - 1 : t;
-    }
-
     scheduleInst();
     inflightIssues.advance();
+
+    for (auto& t : portBusy) {
+        t = t >> 1;
+    }
 }
 
 bool
@@ -472,8 +486,8 @@ IssueQue::ready()
 bool
 IssueQue::full()
 {
-    bool full = instNumInsert + instNum >= iqsize;
-    full |= replayQ.size() > replayQsize;  // TODO: parameterize it
+    bool full = instNum >= iqsize;
+    full |= replayQ.size() > replayQsize;
     if (full) {
         DPRINTF(Schedule, "has full!\n");
     }
@@ -493,7 +507,6 @@ IssueQue::insert(const DynInstPtr& inst)
     cpu->perfCCT->updateInstPos(inst->seqNum, PerfRecord::AtIssueQue);
 
     DPRINTF(Schedule, "[sn:%llu] %s insert into %s\n", inst->seqNum, enums::OpClassStrings[inst->opClass()], iqname);
-    DPRINTF(Schedule, "[sn:%llu] instNum++\n", inst->seqNum);
     inst->issueQue = this;
     instList.emplace_back(inst);
     bool addToDepGraph = false;
@@ -551,17 +564,20 @@ IssueQue::doSquash(const InstSeqNum seqNum)
 {
     for (auto it = instList.begin(); it != instList.end();) {
         if ((*it)->seqNum > seqNum) {
-            (*it)->setSquashedInIQ();
-            (*it)->setCanCommit();
-            (*it)->clearInIQ();
-            (*it)->setCancel();
             if (!(*it)->isIssued()) {
                 POPINST((*it));
                 (*it)->setIssued();
-            } else if ((*it)->issueportid >= 0) {
+            }
+            if ((*it)->isScheduled() && !opPipelined[(*it)->opClass()]) {
                 portBusy[(*it)->issueportid] = 0;
             }
+
+            (*it)->setSquashedInIQ();
+            (*it)->setCanCommit();
+            (*it)->clearScheduled();
+            (*it)->setCancel();
             it = instList.erase(it);
+            assert(instList.size() >= instNum);
         } else {
             it++;
         }
@@ -734,6 +750,8 @@ Scheduler::addToFU(const DynInstPtr& inst)
 void
 Scheduler::tick()
 {
+    // we need to update portBusy counter each cycle
+    cpu->activateStage(CPU::IEWIdx);
     for (auto it : issueQues) {
         it->tick();
     }
@@ -821,7 +839,6 @@ Scheduler::addProducer(const DynInstPtr& inst)
 void
 Scheduler::insert(const DynInstPtr& inst)
 {
-    inst->setInIQ();
     auto& iqs = dispTable[inst->opClass()];
     bool inserted = false;
 
@@ -853,7 +870,6 @@ Scheduler::insert(const DynInstPtr& inst)
 void
 Scheduler::insertNonSpec(const DynInstPtr& inst)
 {
-    inst->setInIQ();
     auto& iqs = dispTable[inst->opClass()];
 
     for (auto iq : iqs) {
@@ -976,11 +992,9 @@ Scheduler::loadCancel(const DynInstPtr& inst)
                     int srcIdx = it.first;
                     auto& depInst = it.second;
                     if (depInst->readySrcIdx(srcIdx) && depInst->renamedSrcIdx(srcIdx) != cpu->vecOnesPhysRegId) {
-                        assert(!depInst->isIssued());
                         DPRINTF(Schedule, "cancel [sn:%llu], clear src p%d ready\n", depInst->seqNum,
                                 depInst->renamedSrcIdx(srcIdx)->flatIndex());
-                        depInst->setCancel();
-                        iq->iqstats->canceledInst++;
+                        depInst->issueQue->cancel(depInst);
                         depInst->clearSrcRegReady(srcIdx);
                         dfs.push(depInst);
                     }
