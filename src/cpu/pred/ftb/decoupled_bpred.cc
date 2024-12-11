@@ -31,6 +31,7 @@ DecoupledBPUWithFTB::DecoupledBPUWithFTB(const DecoupledBPUWithFTBParams &p)
       fetchTargetQueue(p.ftq_size),
       fetchStreamQueueSize(p.fsq_size),
       numBr(p.numBr),
+      predictWidth(p.predictWidth),
       historyBits(p.maxHistLen),
       uftb(p.uftb),
       ftb(p.ftb),
@@ -44,6 +45,7 @@ DecoupledBPUWithFTB::DecoupledBPUWithFTB(const DecoupledBPUWithFTBParams &p)
       historyManager(p.numBr),
       dbpFtbStats(this, p.numStages, p.fsq_size)
 {
+    gem5::branch_prediction::ftb_pred::predictWidth = p.predictWidth;
     if (bpDBSwitches.size() > 0) {
         
         bpdb.init_db();
@@ -2130,7 +2132,7 @@ DecoupledBPUWithFTB::tryEnqFetchTarget()
          ftq_enq_state.pc, end);
     }
     
-    assert(ftq_enq_state.pc <= end || (end < 0x20 && (ftq_enq_state.pc + 0x20 < 0x20)));
+    assert(ftq_enq_state.pc <= end || (end < predictWidth && (ftq_enq_state.pc + predictWidth < predictWidth)));
 
     // create a new target entry
     FtqEntry ftq_entry;
@@ -2146,7 +2148,7 @@ DecoupledBPUWithFTB::tryEnqFetchTarget()
         bool jaHit = stream_to_enq.jaHit;
         if (jaHit) {
             int &currentSentBlock = stream_to_enq.currentSentBlock;
-            thisFtqEntryShouldEndPC = stream_to_enq.startPC + (currentSentBlock + 1) * 0x20;
+            thisFtqEntryShouldEndPC = stream_to_enq.startPC + (currentSentBlock + 1) * predictWidth;
             currentSentBlock++;
         }
     }
@@ -2319,9 +2321,9 @@ DecoupledBPUWithFTB::generateAndSetNewFetchStream()
             entry.isHit = false;
             entry.falseHit = true;
             entry.predTaken = false;
-            entry.predEndPC = entry.startPC + 32;
+            entry.predEndPC = entry.startPC + predictWidth;
             entry.predFTBEntry = FTBEntry();
-            s0PC = entry.startPC + 32; // TODO: parameterize
+            s0PC = entry.startPC + predictWidth;
             // TODO: when false hit, act like a miss, do not update history
         }
 

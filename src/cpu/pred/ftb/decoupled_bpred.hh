@@ -213,6 +213,8 @@ class DecoupledBPUWithFTB : public BPredUnit
 
     unsigned numBr;
 
+    unsigned predictWidth;
+
     unsigned cacheLineOffsetBits{6};  // TODO: parameterize this
     unsigned cacheLineSize{64};
 
