@@ -270,7 +270,7 @@ def addCommonOptions(parser, configure_xiangshan=False):
                         "basic branch trace is enabled by default even without specifying, "
                         "available subdatabase: basic, tage, ras, loop")
     parser.add_argument("--disable-sc", default=False, action="store_true",
-                        help="enable sc (only for ftb branch predictor)")
+                        help="disable SC (enabled by default, only for FTBTAGE)")
     parser.add_argument("--enable-loop-buffer", default=False, action="store_true",
                         help="enable loop buffer (only for ftb branch predictor)")
     parser.add_argument("--enable-loop-predictor", default=False, action="store_true",
