@@ -5,9 +5,44 @@ on:
     branches: [ xs-dev ]
   pull_request:
     branches: [ xs-dev ]
+  workflow_dispatch:
+    inputs:
+      run_memory_check:
+        description: '运行内存检查'
+        type: boolean
+        default: false
+      run_gcb_test:
+        description: '运行 RV64GCB 测试'
+        type: boolean
+        default: false
+      run_gcbv_test:
+        description: '运行 RV64GCBV 测试'
+        type: boolean
+        default: false
+      run_multi_core_test:
+        description: '运行多核测试'
+        type: boolean
+        default: false
+      run_difftest:
+        description: '运行 Difftest 检查'
+        type: boolean
+        default: false
+      run_l2tlb_test:
+        description: '运行 L2TLB 测试'
+        type: boolean
+        default: false
+      run_gcbh_test:
+        description: '运行 RV64GCBH 测试'
+        type: boolean
+        default: false
+      run_perf_test:
+        description: '运行性能测试'
+        type: boolean
+        default: false
 
 jobs:
   valgrind_memory_check:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_memory_check }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Check memory corruption
@@ -32,6 +67,7 @@ jobs:
           cd $GEM5_HOME
 
   new_sim_script_test_gcb:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gcb_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Test new simulation script on RV64GCB
@@ -59,6 +95,7 @@ jobs:
           bash ../kmh_6wide.sh /nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec06_rv64gcb_O3_20m_gcc12.2.0-intFpcOff-jeMalloc/zstd-checkpoint-0-0-0/xalancbmk/133/_133_0.006424_.zstd
 
   new_sim_script_test_gcbv:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gcbv_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Test new simulation script on RV64GCBV
@@ -86,6 +123,7 @@ jobs:
           bash ../kmh_6wide_vector.sh /nfs/home/share/jiaxiaoyu/simpoint_checkpoint_archive/spec06_hmmer_libquantum_h264_rv64gcv_O3_20m_gcc14.0.0_1218-intFpcOff-ptMalloc/disdain-practical-toll-2023-12-25-11-26/zstd-checkpoint-0-0-0/hmmer_nph3/102/_102_0.0243576.zstd
 
   new_sim_script_test_gcb_multi_core:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_multi_core_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Test Multi-core + RV64GCB
@@ -105,6 +143,7 @@ jobs:
           bash ../kmh-ruby-dual.sh /nfs-nvme/home/share/zyy/shared_payloads/bzip_checkpoint_with_sv39_without_rdtime_with_dualmtimecpt_1000M.gz
 
   difftest_check:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_difftest }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Check difftest
@@ -135,6 +174,7 @@ jobs:
           if [ ${match} -eq 0 ]; then echo "Difftest is broken, it should report at least one agnostic related difference!" exit 1; fi
 
   test_fix_l2tlb_bugs:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_l2tlb_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Test fix L2TLB bugs
@@ -162,6 +202,7 @@ jobs:
           bash ../kmh_6wide.sh  /nfs/home/share/yanyue/checkpoints/gcc13_gcb_403_61291.zstd
 
   new_sim_script_test_gcbh:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_gcbh_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Test new simulation script on RV64GCBH
@@ -189,6 +230,7 @@ jobs:
           bash ../kmh_6wide_h.sh /nfs/home/share/jiaxiaoyu/H-ext-checkpoint-uniform-zstd-nosmp/uniform/payload/820000000/_820000000_.zstd
 
   run_performance_test:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_perf_test }}
     runs-on: self-hosted
     continue-on-error: false
     name: XS-GEM5 - Run performance test
