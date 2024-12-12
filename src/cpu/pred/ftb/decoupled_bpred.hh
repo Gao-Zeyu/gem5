@@ -195,6 +195,8 @@ class DecoupledBPUWithFTB : public BPredUnit
     JumpAheadPredictor jap;
     bool enableJumpAheadPredictor{true};
 
+    bool enableTwoTaken{false};
+
   private:
     std::string _name;
 
@@ -537,6 +539,7 @@ class DecoupledBPUWithFTB : public BPredUnit
 
   public:
     void tick();
+    void ideal_tick();
 
     bool trySupplyFetchWithTarget(Addr fetch_demand_pc, bool &fetchTargetInLoop);
 

@@ -1315,7 +1315,12 @@ Fetch::tick()
         usedUpFetchTargets = !dbsp->trySupplyFetchWithTarget(pc[0]->instAddr());
     } else if (isFTBPred()) {
         assert(dbpftb);
-        dbpftb->tick();
+        // TODO: remove ideal_tick()
+        if (dbpftb->enableTwoTaken){
+            dbpftb->ideal_tick();
+        } else {
+            dbpftb->tick();
+        }
         usedUpFetchTargets = !dbpftb->trySupplyFetchWithTarget(pc[0]->instAddr(), currentFetchTargetInLoop);
     }
 }
