@@ -319,7 +319,7 @@ def setKmhV3IdealParams(args, system):
         cpu.commitToFetchDelay = 2
         cpu.fetchQueueSize = 64
         cpu.fetchToDecodeDelay = 2
-        cpu.decodeWidth = 10
+        cpu.decodeWidth = 8
         cpu.renameWidth = 8
         cpu.dispWidth = [10, 10, 10] # 6->10
         cpu.commitWidth = 12
@@ -333,8 +333,9 @@ def setKmhV3IdealParams(args, system):
         cpu.numROBEntries = 640
         cpu.numDQEntries = [32, 16, 16] # 32->36
         cpu.mmu.itb.size = 96
+        cpu.SbufferEvictThreshold = 8
 
-        cpu.scheduler.disableAllRegArb()
+        # cpu.scheduler.disableAllRegArb()
 
         for iq in cpu.scheduler.IQs:
             if iq.name.startswith('intIQ'):
