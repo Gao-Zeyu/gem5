@@ -257,7 +257,7 @@ jobs:
           
           # 使用时间戳创建唯一的结果目录持久化存储在CI服务器中, 时间戳+commit_sha
           export TIME_STAMP=$(date +%Y%m%d_%H%M%S)
-          export RESULT_ROOT="/nfs/home/ci_results/gem5_perf_test"
+          export RESULT_ROOT="/tmp/ci_results/gem5_perf_test"
           export TEST_RESULT_DIR="$RESULT_ROOT/$TIME_STAMP-$GITHUB_SHA"
           
           # 创建结果目录并切换到该目录
