@@ -20,6 +20,7 @@ namespace ftb_pred{
 FTBTAGE::FTBTAGE(const Params& p)
     : TimedBaseFTBPredictor(p),
       numPredictors(p.numPredictors),
+      baseTableSize(p.baseTableSize),
       tableSizes(p.tableSizes),
       tableTagBits(p.TTagBitSizes),
       tablePcShifts(p.TTagPcShifts),
@@ -27,6 +28,7 @@ FTBTAGE::FTBTAGE(const Params& p)
       maxHistLen(p.maxHistLen),
       numTablesToAlloc(p.numTablesToAlloc),
       numBr(p.numBr),
+      enableSC(p.enableSC),
       sc(p.numBr, this)
 {
     tageBankStats = new TageBankStats * [numBr];
@@ -42,7 +44,7 @@ FTBTAGE::FTBTAGE(const Params& p)
     tableIndexMasks.resize(numPredictors);
     tableTagBits.resize(numPredictors);
     tableTagMasks.resize(numPredictors);
-    baseTable.resize(2048); // need modify
+    baseTable.resize(baseTableSize);
     for (unsigned int i = 0; i < p.numPredictors; ++i) {
         //initialize ittage predictor
         assert(tableSizes.size() >= numPredictors);
@@ -76,7 +78,6 @@ FTBTAGE::FTBTAGE(const Params& p)
         useAlt[i].resize(numBr, 0);
     }
     
-    enableSC = true;
     std::vector<TageBankStats *> statsPtr;
     for (int i = 0; i < numBr; i++) {
         statsPtr.push_back(tageBankStats[i]);
