@@ -204,6 +204,7 @@ class DecoupledBPUWithFTB : public BPredUnit
     unsigned fetchStreamQueueSize;
     FetchStreamId fsqId{1};
     FetchStream lastCommittedStream;
+    FetchStream streamToEnqueue;
 
     CPU *cpu;
 
@@ -283,7 +284,7 @@ class DecoupledBPUWithFTB : public BPredUnit
 
     void tryEnqFetchTarget();
 
-    void makeNewPrediction(bool create_new_stream);
+    void enqueueFetchStream();
 
     void makeLoopPredictions(FetchStream &entry, bool &endLoop, bool &isDouble, bool &loopConf,
         std::vector<LoopRedirectInfo> &lpRedirectInfos, std::vector<bool> &fixNotExits,
@@ -351,7 +352,11 @@ class DecoupledBPUWithFTB : public BPredUnit
         return fetchStreamQueue.size() >= fetchStreamQueueSize;
     }
 
-    void generateFinalPredAndCreateBubbles();
+    // return number of bubbles created
+    int generateFinalPredAndCreateBubbles();
+
+    // set new fetch stream from final pred
+    void generateAndSetNewFetchStream();
 
     // const bool dumpLoopPred;
 
