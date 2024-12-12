@@ -369,6 +369,7 @@ def setKmhV3IdealParams(args, system):
             cpu.dcache.size = '128kB'
             cpu.icache.enable_wayprediction = False
             cpu.dcache.enable_wayprediction = False
+            cpu.dcache.tag_load_read_ports = 100 # 3->100
 
     if args.l2cache:
         for i in range(args.num_cpus):
