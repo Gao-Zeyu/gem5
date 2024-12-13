@@ -606,9 +606,6 @@ DecoupledBPUWithFTB::tick()
         dbpFtbStats.fsqFullCannotEnq++;
     }
 
-    if (!receivedPred && numOverrideBubbles == 0 && sentPCHist) {
-        numOverrideBubbles = generateFinalPredAndCreateBubbles();
-    }
     if (!squashing) {
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
@@ -667,6 +664,10 @@ DecoupledBPUWithFTB::tick()
         DPRINTF(Override, "Stream queue is full, don't request prediction\n");
     }
     squashing = false;
+
+    if (!receivedPred && numOverrideBubbles == 0 && sentPCHist) {
+        numOverrideBubbles = generateFinalPredAndCreateBubbles();
+    }
 }
 
 // ideal_tick() is copied from commit: e7294f1813c331dbce8bcfa4d5eb981f7c8440c5
