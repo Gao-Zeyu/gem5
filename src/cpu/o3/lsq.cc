@@ -202,6 +202,7 @@ LSQ::clearAddresses(Tick time)
 {
     lastConflictCheckTick = time;
     l1dBankAddresses.clear();
+    recentlyloadAddr.clear();
 }
 
 bool
