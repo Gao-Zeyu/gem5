@@ -928,8 +928,6 @@ Scheduler::useRegfilePort(const DynInstPtr& inst, const PhysRegIdPtr& regid, int
         if (regCache.contains(regid->flatIndex())) {
             regCache.get(regid->flatIndex());
             return;
-        } else {
-            regCache.insert(regid->flatIndex(), {});
         }
     }
     assert(typePortId < rfPortOccupancy.size());
@@ -1016,6 +1014,7 @@ Scheduler::writebackWakeup(const DynInstPtr& inst)
             continue;
         }
         scoreboard[dst->flatIndex()] = true;
+        regCache.insert(dst->flatIndex(), {});
     }
     for (auto it : issueQues) {
         it->wakeUpDependents(inst, false);
