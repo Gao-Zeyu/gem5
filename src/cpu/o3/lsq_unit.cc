@@ -96,21 +96,31 @@ StoreBufferEntry::merge(uint64_t offset, uint8_t *datas, uint64_t size)
 }
 
 bool
-StoreBufferEntry::recordForward(PacketPtr pkt, LSQ::LSQRequest *req)
+StoreBufferEntry::recordForward(RequestPtr req, LSQ::LSQRequest *lsqreq)
 {
-    int offset = pkt->getAddr() & (validMask.size() - 1);
-    int goffset = pkt->req->getVaddr() - req->mainReq()->getVaddr();
+    int offset = req->getPaddr() & (validMask.size() - 1);
+    // the offset in the split request
+    int goffset = req->getVaddr() - lsqreq->mainReq()->getVaddr();
     if (goffset > 0) {
         assert(offset == 0);
     }
-    for (int i = 0; i < pkt->getSize(); i++) {
-        if (validMask[offset + i]) {
-            assert(goffset + i < req->_size);
-            req->forwardPackets.push_back(
+    bool full_forward = true;
+    for (int i = 0; i < req->getSize(); i++) {
+        assert(goffset + i < lsqreq->_size);
+        if (vice && vice->validMask[offset + i]) {
+            // vice is newer
+            assert(vice->blockVaddr == blockVaddr);
+            lsqreq->forwardPackets.push_back(
+                LSQ::LSQRequest::FWDPacket{.idx = goffset + i, .byte = vice->blockDatas[offset + i]});
+        } else if (validMask[offset + i]) {
+            lsqreq->forwardPackets.push_back(
                 LSQ::LSQRequest::FWDPacket{.idx = goffset + i, .byte = blockDatas[offset + i]});
+        } else {
+            full_forward = false;
         }
     }
-    return false;
+
+    return full_forward;
 }
 
 void
@@ -557,6 +567,8 @@ LSQUnit::LSQUnitStats::LSQUnitStats(statistics::Group *parent)
       ADD_STAT(sbufferEvictDuetoFull, statistics::units::Count::get(), ""),
       ADD_STAT(sbufferEvictDuetoSQFull, statistics::units::Count::get(), ""),
       ADD_STAT(sbufferEvictDuetoTimeout, statistics::units::Count::get(), ""),
+      ADD_STAT(sbufferFullForward, statistics::units::Count::get(), ""),
+      ADD_STAT(sbufferPartiForward, statistics::units::Count::get(), ""),
       ADD_STAT(loadToUse, "Distribution of cycle latency between the "
                 "first time a load is issued and its completion"),
       ADD_STAT(loadTranslationLat, "Distribution of cycle latency between the "
@@ -1337,7 +1349,7 @@ bool LSQUnit::insertStoreBuffer(Addr vaddr, Addr paddr, uint8_t* datas, uint64_t
     assert((vaddr & cacheBlockMask) == ((vaddr + size - 1) & cacheBlockMask));
     Addr blockVaddr = vaddr & cacheBlockMask;
     Addr blockPaddr = paddr & cacheBlockMask;
-    Addr offset = paddr & (cpu->cacheLineSize() - 1);
+    Addr offset = paddr & ~cacheBlockMask;
     // check request is not already in the storebuffer
     auto entry = storeBuffer.get(blockPaddr);
     if (entry) {
@@ -1854,10 +1866,11 @@ LSQUnit::trySendPacket(bool isLoad, PacketPtr data_pkt, bool &bank_conflict, boo
             auto entry = storeBuffer.get(pkt->getAddr() & cacheBlockMask);
             if (entry) {
                 DPRINTF(StoreBuffer, "sbuffer entry[%#x] coverage %s\n", entry->blockPaddr, pkt->print());
-                entry->recordForward(pkt, request);
-                if (entry->vice) {
-                    DPRINTF(StoreBuffer, "sbuffer vice entry coverage\n");
-                    entry->vice->recordForward(pkt, request);
+                if (entry->recordForward(pkt->req, request)) {
+                    assert(request->isSplit()); // here must be split request
+                    stats.sbufferFullForward++;
+                } else {
+                    stats.sbufferPartiForward++;
                 }
             }
         }
@@ -2291,6 +2304,48 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
             }
         }
     }
+
+    // sbuffer forward
+    if (!load_inst->isDataPrefetch() && !request->isSplit()) {
+        Addr blk_addr = request->mainReq()->getPaddr() & cacheBlockMask;
+        int offset = request->mainReq()->getPaddr() & ~cacheBlockMask;
+        auto entry = storeBuffer.get(blk_addr);
+        if (entry) {
+            if (entry->recordForward(request->mainReq(), request)) {
+                // full forward
+                // no need to send to cache
+                stats.sbufferFullForward++;
+                if (!load_inst->memData) {
+                    load_inst->memData = new uint8_t[request->mainReq()->getSize()];
+                }
+
+                request->forward();
+
+                PacketPtr data_pkt = new Packet(request->mainReq(),
+                        MemCmd::ReadReq);
+                data_pkt->dataStatic(load_inst->memData);
+
+                assert(!request->mainReq()->isHTMCmd());
+                if (load_inst->inHtmTransactionalState()) {
+                    data_pkt->setHtmTransactional(
+                        load_inst->getHtmTransactionUid());
+                }
+
+                if (request->isAnyOutstandingRequest()) {
+                    assert(request->_numOutstandingPackets > 0);
+                    request->discard();
+                }
+
+                WritebackEvent *wb = new WritebackEvent(load_inst, data_pkt,
+                        this);
+                cpu->schedule(wb, curTick());
+                return NoFault;
+            }
+            // if not fully forward, need to clear buffer
+            request->forwardPackets.clear();
+        }
+    }
+
 
     // If there's no forwarding case, then go access memory
     DPRINTF(LSQUnit, "Doing memory access for inst [sn:%lli] PC %s\n",
