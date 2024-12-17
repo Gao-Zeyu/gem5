@@ -56,6 +56,7 @@
 #include "debug/CacheTags.hh"
 #include "debug/CacheVerbose.hh"
 #include "enums/Clusivity.hh"
+#include "mem/cache/base.hh"
 #include "mem/cache/cache_blk.hh"
 #include "mem/cache/mshr.hh"
 #include "mem/cache/tags/base.hh"
@@ -802,8 +803,16 @@ Cache::serviceMSHRTargets(MSHR *mshr, const PacketPtr pkt, CacheBlk *blk)
                 // responseLatency is the latency of the return path
                 // from lower level caches/memory to an upper level cache or
                 // the core.
-                completion_time += clockEdge(responseLatency) +
-                    (transfer_offset ? pkt->payloadDelay : 0);
+                if ((cacheLevel == 1 && !isReadOnly) &&
+                    tgt_pkt->isRead() && !tgt_pkt->isWrite() && !tgt_pkt->isLLSC()) {
+                    // Send TimingResp to LSU a few cycles in advance so that it can be replayed from ReplayQ earlier.
+                    assert(hintWakeUpAheadCycles <= responseLatency);
+                    completion_time += clockEdge(responseLatency - hintWakeUpAheadCycles) +
+                        (transfer_offset ? pkt->payloadDelay : 0);
+                } else {
+                    completion_time += clockEdge(responseLatency) +
+                        (transfer_offset ? pkt->payloadDelay : 0);
+                }
 
                 assert(!tgt_pkt->req->isUncacheable());
 

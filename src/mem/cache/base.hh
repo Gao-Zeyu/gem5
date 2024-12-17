@@ -1052,6 +1052,11 @@ class BaseCache : public ClockedObject, CacheAccessor
     /** ArchDB */
     ArchDBer *archDBer;
 
+    /** Cache Level, 1 means L1 */
+    const unsigned cacheLevel{0};
+
+    Cycles hintWakeUpAheadCycles;
+
     int squashedWays;
 
   public:
@@ -1502,8 +1507,6 @@ class BaseCache : public ClockedObject, CacheAccessor
     void unserialize(CheckpointIn &cp) override;
 
   private:
-
-    const unsigned cacheLevel{0};
 
     //const unsigned maxCacheLevel;
 

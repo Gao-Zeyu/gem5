@@ -154,6 +154,9 @@ class BaseCache(ClockedObject):
 
     tag_load_read_ports = Param.Unsigned(3, "Total tag read ports for load/prefetcher(in L1 Cache)")
 
+    hint_wakeup_ahead_cycles = Param.Unsigned(3, "How many cycles " \
+        "giving a response to LSU waking up the missed load in advance")
+
     force_hit = Param.Bool(False, "Force some PC to hit in L1")
     way_entries = Param.MemorySize(
         "64",

@@ -145,9 +145,10 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
       missCount(p.max_miss_count),
       addrRanges(p.addr_ranges.begin(), p.addr_ranges.end()),
       archDBer(p.arch_db),
+      cacheLevel(p.cache_level),
+      hintWakeUpAheadCycles(p.hint_wakeup_ahead_cycles),
       system(p.system),
       stats(*this),
-      cacheLevel(p.cache_level),
       forceHit(p.force_hit)
 {
     // the MSHR queue has no reserve entries as we check the MSHR
