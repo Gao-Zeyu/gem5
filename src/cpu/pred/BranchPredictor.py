@@ -861,6 +861,7 @@ class TimedBaseFTBPredictor(SimObject):
     cxx_header = "cpu/pred/ftb/timed_base_pred.hh"
     
     numBr = Param.Unsigned(Parent.numBr, "Number of maximum branches per entry")
+    predictWidth = Param.Unsigned(Parent.predictWidth, "The width of prediction/fetch block")
     # subclass are encouraged to explicitly declare latency as numDelay
     numDelay = Param.Unsigned(1000, "Number of bubbles to put on a prediction")
 
@@ -943,6 +944,7 @@ class DecoupledBPUWithFTB(BranchPredictor):
     fsq_size = Param.Unsigned(64, "Fetch stream queue size")
     maxHistLen = Param.Unsigned(970, "The length of history")
     numBr = Param.Unsigned(2, "Number of maximum branches per entry")
+    predictWidth = Param.Unsigned(32, "The width of prediction/fetch block")
     numStages = Param.Unsigned(3, "Number of stages in the pipeline")
     ftb = Param.DefaultFTB(DefaultFTB(), "FTB")
     tage = Param.FTBTAGE(FTBTAGE(), "TAGE predictor")
