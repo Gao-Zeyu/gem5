@@ -180,4 +180,58 @@ class KunminghuScheduler(Scheduler):
             for port in iq.oports:
                 port.rp.clear()
 
+class IdealScheduler(Scheduler):
+    IQs = [
+        IssueQue(name='intIQ0', inports=2, size=2*24, oports=[
+            IssuePort(fu=[IntALU(), IntMult()]),
+            IssuePort(fu=[IntBRU()])
+        ]),
+        IssueQue(name='intIQ1', inports=2, size=2*24, oports=[
+            IssuePort(fu=[IntALU(), IntMult()]),
+            IssuePort(fu=[IntBRU()])
+        ]),
+        IssueQue(name='intIQ2', inports=2, size=2*24, oports=[
+            IssuePort(fu=[IntALU()]),
+            IssuePort(fu=[IntBRU(), IntMisc()])
+        ]),
+        IssueQue(name='intIQ3', inports=2, size=2*24, oports=[
+            IssuePort(fu=[IntALU()]),
+            IssuePort(fu=[IntDiv()])
+        ]),
+        IssueQue(name='load0', inports=6, size=3*32, oports=[
+            IssuePort(fu=[ReadPort()]),
+            IssuePort(fu=[ReadPort()]),
+            IssuePort(fu=[ReadPort()])
+        ]),
+        IssueQue(name='store0', inports=4, size=2*32, oports=[
+            IssuePort(fu=[WritePort()]),
+            IssuePort(fu=[WritePort()])
+        ]),
+        IssueQue(name='fpIQ0', inports=2, size=18, oports=[
+            IssuePort(fu=[FP_ALU(), FP_MISC(), FP_MAC()])
+        ], scheduleToExecDelay=3),
+        IssueQue(name='fpIQ1', inports=2, size=18, oports=[
+            IssuePort(fu=[FP_ALU(), FP_MAC()])
+        ], scheduleToExecDelay=3),
+        IssueQue(name='fpIQ2', inports=2, size=18, oports=[
+            IssuePort(fu=[FP_ALU(), FP_MAC()])
+        ], scheduleToExecDelay=3),
+        IssueQue(name='fpIQ3', inports=2, size=18, oports=[
+            IssuePort(fu=[FP_ALU(), FP_MAC()])
+        ], scheduleToExecDelay=3),
+        IssueQue(name='fpIQ4', inports=2, size=18, oports=[
+            IssuePort(fu=[FP_SLOW()]),
+            IssuePort(fu=[FP_SLOW()])
+        ], scheduleToExecDelay=3),
+        IssueQue(name='vecIQ0', inports=5, size=16+16+10, oports=[
+            IssuePort(fu=[SIMD_Unit()]),
+            IssuePort(fu=[SIMD_Unit()]),
+            IssuePort(fu=[SIMD_Unit()]),
+            IssuePort(fu=[SIMD_Unit()]),
+            IssuePort(fu=[SIMD_Unit()])
+        ], scheduleToExecDelay=3),
+    ]
+    xbarWakeup = True
+
+
 DefaultScheduler = KunminghuScheduler

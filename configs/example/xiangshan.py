@@ -329,24 +329,17 @@ def setKmhV3IdealParams(args, system):
         cpu.LQEntries = 128
         cpu.SQEntries = 96
         cpu.SbufferEntries = 24
+        cpu.SbufferEvictThreshold = 16
         cpu.numPhysIntRegs = 354
         cpu.numPhysFloatRegs = 384
         cpu.numROBEntries = 640
         cpu.numDQEntries = [32, 16, 16] # 32->36
         cpu.mmu.itb.size = 96
-        cpu.SbufferEvictThreshold = 8
+        
+        cpu.BankConflictCheck = False   # real bank conflict 0.2 score
 
-        # cpu.scheduler.disableAllRegArb()
-
-        for iq in cpu.scheduler.IQs:
-            if iq.name.startswith('intIQ'):
-                iq.size = 2 * 24
-            if iq.name.startswith('load'):
-                iq.size = 32
-            if iq.name.startswith('store'):
-                iq.size = 32
-            if iq.name.startswith('fpIQ'):
-                iq.size = 32
+        cpu.scheduler = IdealScheduler()    
+        # use centralized load/store issue queue, for hmmer
 
         # ideal decoupled frontend
         if args.bp_type is None or args.bp_type == 'DecoupledBPUWithFTB':
