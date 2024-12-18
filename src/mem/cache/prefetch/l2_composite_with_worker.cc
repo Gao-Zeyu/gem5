@@ -71,7 +71,10 @@ L2CompositeWithWorkerPrefetcher::notify(const PacketPtr &pkt, const PrefetchInfo
 void
 L2CompositeWithWorkerPrefetcher::pfHitNotify(float accuracy, PrefetchSourceType pf_source, const PacketPtr &pkt)
 {
-    cdp->pfHitNotify(accuracy, pf_source, pkt, addressGenBuffer);
+    if (enableCDP) {
+        cdp->pfHitNotify(accuracy, pf_source, pkt, addressGenBuffer);
+    }
+
     if (addressGenBuffer.size()) {
         assert(pkt->req->hasVaddr());
         postNotifyInsert(pkt, addressGenBuffer);
@@ -93,7 +96,10 @@ L2CompositeWithWorkerPrefetcher::setParentInfo(System *sys, ProbeManager *pm, Ca
 void
 L2CompositeWithWorkerPrefetcher::notifyFill(const PacketPtr &pkt)
 {
-    cdp->notifyFill(pkt, addressGenBuffer);
+    if (enableCDP) {
+        cdp->notifyFill(pkt, addressGenBuffer);
+    }
+
     if (addressGenBuffer.size()) {
         assert(pkt->req->hasVaddr());
         postNotifyInsert(pkt, addressGenBuffer);

@@ -1032,7 +1032,7 @@ class L2CompositeWithWorkerPrefetcher(CompositeWithWorkerPrefetcher):
     bop_small = Param.BOPPrefetcher(SmallBOPPrefetcher(is_sub_prefetcher=True),
                                      "Small BOP used in composite prefetcher ")
     enable_bop = Param.Bool(False, "Enable BOP")
-    enable_cdp = Param.Bool(False, "Enable CDP")
+    enable_cdp = Param.Bool(True, "Enable CDP")
     enable_cmc = Param.Bool(False, "Enable CMC")
 
 class L3CompositeWithWorkerPrefetcher(CompositeWithWorkerPrefetcher):
