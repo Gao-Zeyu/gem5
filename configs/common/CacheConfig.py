@@ -122,9 +122,9 @@ def config_cache(options, system):
         # are not connected using addTwoLevelCacheHierarchy. Use the
         # same clock as the CPUs.
         system.l2_caches = [l2_cache_class(clk_domain=system.cpu_clk_domain,
-                            **_get_cache_opts(system.cpu[i], 'l2', options)) for i in range(options.num_cpus)]
-        system.tol2bus_list = [L2XBar(
-            clk_domain=system.cpu_clk_domain, width=256) for i in range(options.num_cpus)]
+                                           **_get_cache_opts(system.cpu[i], 'l2', options)) for i in range(options.num_cpus)]
+        system.tol2bus_list = [L1ToL2Bus(
+            clk_domain=system.cpu_clk_domain) for i in range(options.num_cpus)]
         for i in range(options.num_cpus):
             # system.l2_caches.append(l2_cache_class(clk_domain=system.cpu_clk_domain,
             #                        **_get_cache_opts('l2', options)))
@@ -158,18 +158,10 @@ def config_cache(options, system):
                 system.l2_caches[i].response_latency = 66
                 system.l2_caches[i].writeback_clean = False
 
-            system.membus.frontend_latency = 0
-            system.membus.response_latency = 0
-            system.membus.forward_latency = 0
-            system.membus.header_latency = 0
-            system.membus.snoop_response_latency = 0
-            system.membus.width = 128 # byte per cycle
-
-
         if options.l3cache:
             system.l3 = L3Cache(clk_domain=system.cpu_clk_domain,
                                         **_get_cache_opts(NULL, 'l3', options))
-            system.tol3bus = L2XBar(clk_domain=system.cpu_clk_domain, width=256)
+            system.tol3bus = L2ToL3Bus(clk_domain=system.cpu_clk_domain)
             system.tol3bus.snoop_filter.max_capacity = "32MB"
             system.l3.cpu_side = system.tol3bus.mem_side_ports
             system.l3.mem_side = system.membus.cpu_side_ports
