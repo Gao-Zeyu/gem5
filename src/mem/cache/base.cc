@@ -110,6 +110,7 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
       writeBuffer("write buffer", p.write_buffers, p.mshrs, p.name),
       tags(p.tags),
       tagLoadReadPorts(p.tag_load_read_ports),
+      sliceNum(p.slice_num),
       freeTagLoadReadPorts(p.tag_load_read_ports),
       lastTagAccessCheckCycle(0),
       compressor(p.compressor),
@@ -177,6 +178,12 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
         "Compressed cache %s does not have a compression algorithm", name());
     if (compressor)
         compressor->setCache(this);
+
+    if (sliceNum > 0) {
+        sliceReadyTick.resize(sliceNum, 0);
+        assert(popCount(sliceNum) == 1);
+    }
+
 
     if (dumpMissPC && cacheLevel) {
         registerExitCallback([this]() {
@@ -371,15 +378,19 @@ BaseCache::handleTimingReqHit(PacketPtr pkt, CacheBlk *blk, Tick request_time, b
         // just as the value of lat overriden by access(), which calls
         // the calculateAccessLatency() function.
         DPRINTF(Cache, "In handle timing hit, pkt has data: %i\n", pkt->hasData());
-        if (cacheLevel == 1 && pkt->isRead()) {
-            assert(pkt->hasData());
+        if (cacheLevel == 1) {
             // load pipe shoud have fixed delay
             this->schedule(new SendTimingRespEvent(this, pkt), request_time - 1);
         }
         else {
-            cpuSidePort.schedTimingResp(pkt, request_time);
+            Tick delay = calculateBusyLatenct(request_time, pkt);
+            cpuSidePort.schedTimingResp(pkt, request_time + delay);
         }
     } else {
+        if (pkt->isEviction()) {
+            calculateBusyLatenct(curTick(), pkt);
+        }
+
         DPRINTF(Cache, "%s satisfied %s, no response needed\n", __func__,
                 pkt->print());
 
@@ -1534,8 +1545,7 @@ BaseCache::calculateAccessLatency(const CacheBlk* blk, const uint32_t delay,
         // access latency on top of when the block is ready to be accessed.
         const Tick tick = curTick() + delay;
         const Tick when_ready = blk->getWhenReady();
-        if (when_ready > tick &&
-            ticksToCycles(when_ready - tick) > lat) {
+        if (when_ready > tick) {
             lat += ticksToCycles(when_ready - tick);
             DPRINTF(Cache, "block not ready, need %lu cycle\n", ticksToCycles(when_ready - tick));
         }
@@ -1547,6 +1557,25 @@ BaseCache::calculateAccessLatency(const CacheBlk* blk, const uint32_t delay,
     }
 
     return lat;
+}
+
+Tick
+BaseCache::calculateBusyLatenct(Tick when_ready, PacketPtr pkt)
+{
+    if (sliceNum <= 0) [[likely]] return 0;
+    Addr baddr = pkt->getAddr() >> ceilLog2(blkSize);
+    Addr sliceidx = baddr & (sliceNum - 1);
+    int additional = 1;
+    int opLatency = additional + (lookupLatency == 1 ? 0 : lookupLatency) + (dataLatency == 1 ? 0 : dataLatency);
+    Tick op_lat = cyclesToTicks(Cycles(opLatency));
+    Tick& readytime = sliceReadyTick[sliceidx];
+    if (when_ready >= readytime + op_lat) {
+        readytime = when_ready;
+        return 0;
+    } else {
+        readytime = readytime + op_lat;
+        return readytime + op_lat - when_ready;
+    }
 }
 
 bool

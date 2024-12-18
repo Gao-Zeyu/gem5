@@ -373,6 +373,8 @@ class BaseCache : public ClockedObject, CacheAccessor
     /** Max Tag read ports for L1 Load/pretche */
     const unsigned tagLoadReadPorts;
 
+    const int sliceNum;
+
     /** Available Tag read ports for L1 Load/pretche */
     unsigned freeTagLoadReadPorts;
 
@@ -430,6 +432,8 @@ class BaseCache : public ClockedObject, CacheAccessor
      * hold it for deletion until a subsequent call
      */
     std::unique_ptr<Packet> pendingDelete;
+
+    std::vector<Tick> sliceReadyTick;
 
     /**
      * Mark a request as in service (sent downstream in the memory
@@ -509,6 +513,8 @@ class BaseCache : public ClockedObject, CacheAccessor
      */
     Cycles calculateAccessLatency(const CacheBlk* blk, const uint32_t delay,
                                   const Cycles lookup_lat) const;
+
+    Tick calculateBusyLatenct(Tick when_ready, PacketPtr pkt);
 
     /**
      * Does all the processing necessary to perform the provided request.

@@ -93,6 +93,14 @@ class QueuedResponsePort : public ResponsePort
     void schedTimingResp(PacketPtr pkt, Tick when)
     { respQueue.schedSendTiming(pkt, when); }
 
+    Tick nextReadyTime() {
+      return respQueue.deferredPacketReadyTime();
+    }
+
+    Tick lastReadyTime() {
+      return respQueue.lastDeferredPacketReadyTime();
+    }
+
     /** Check the list of buffered packets against the supplied
      * functional request. */
     bool trySatisfyFunctional(PacketPtr pkt)
@@ -148,6 +156,14 @@ class QueuedRequestPort : public RequestPort
      */
     void schedTimingReq(PacketPtr pkt, Tick when)
     { reqQueue.schedSendTiming(pkt, when); }
+
+    Tick nextReadyTime() {
+      return reqQueue.deferredPacketReadyTime();
+    }
+
+    Tick lastReadyTime() {
+      return reqQueue.lastDeferredPacketReadyTime();
+    }
 
     /**
      * Schedule the sending of a timing snoop response.
