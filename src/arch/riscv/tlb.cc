@@ -1710,7 +1710,7 @@ TLB::doTranslate(const RequestPtr &req, ThreadContext *tc,
     Addr forward_pre_vaddr = vaddr + (l2tlbLineSize << PageShift);
     Addr forward_pre_block = (forward_pre_vaddr >> (PageShift + L2TLB_BLK_OFFSET)) << (PageShift + L2TLB_BLK_OFFSET);
     Addr vaddr_block = (vaddr >> (PageShift + L2TLB_BLK_OFFSET)) << (PageShift + L2TLB_BLK_OFFSET);
-    Addr back_pre_vaddr = vaddr - vaddr + (l2tlbLineSize << PageShift);
+    Addr back_pre_vaddr = vaddr - (l2tlbLineSize << PageShift);
     Addr back_pre_block = (back_pre_vaddr >> (PageShift + L2TLB_BLK_OFFSET)) << (PageShift + L2TLB_BLK_OFFSET);
 
     l2tlb->lookupForwardPre(vaddr_block, satp.asid, false);
