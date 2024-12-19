@@ -252,7 +252,7 @@ class Queued : public Base
      * @param queue selected queue to use
      * @param dpp DeferredPacket to add
      */
-    virtual void addToQueue(std::list<DeferredPacket> &queue, DeferredPacket &dpp);
+    void addToQueue(std::list<DeferredPacket> &queue, DeferredPacket &dpp);
 
     /**
      * Starts the translations of the queued prefetches with a

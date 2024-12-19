@@ -240,7 +240,7 @@ RubyPrefetcherProxy::notifyPfEvict(Addr blkAddr, bool hwPrefetched, XsPFMetaData
     //     blkAddr, false, requestorID, *this);
     // Maybe using the old DataUpdate here is enough
     if (hwPrefetched) {
-        prefetcher->prefetchUnused(blkAddr, pfmeta.prefetchSource);
+        prefetcher->prefetchUnused(pfmeta.prefetchSource);
     }
     DataUpdate data_update(blkAddr, false);
     // data_update.hwPrefetched = hwPrefetched;
