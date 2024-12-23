@@ -103,7 +103,7 @@ class StoreBufferEntry
 
     void merge(uint64_t offset, uint8_t* datas, uint64_t size);
 
-    bool recordForward(PacketPtr pkt, LSQ::LSQRequest* req);
+    bool recordForward(RequestPtr req, LSQ::LSQRequest* lsqreq);
 };
 
 class StoreBuffer
@@ -685,6 +685,8 @@ class LSQUnit
         statistics::Scalar sbufferEvictDuetoFull;
         statistics::Scalar sbufferEvictDuetoSQFull;
         statistics::Scalar sbufferEvictDuetoTimeout;
+        statistics::Scalar sbufferFullForward;
+        statistics::Scalar sbufferPartiForward;
 
         /** Distribution of cycle latency between the first time a load
          * is issued and its completion */

@@ -1,5 +1,6 @@
 #include "mem/cache/prefetch/l2_composite_with_worker.hh"
 
+#include "debug/CDPFilter.hh"
 #include "debug/HWPrefetch.hh"
 #include "mem/cache/prefetch/composite_with_worker.hh"
 
@@ -24,6 +25,30 @@ L2CompositeWithWorkerPrefetcher::L2CompositeWithWorkerPrefetcher(const L2Composi
     smallBOP->filter = &pfLRUFilter;
     cmc->filter = &pfLRUFilter;
     cdp->parentRid = p.sys->getRequestorId(this);
+}
+
+void
+L2CompositeWithWorkerPrefetcher::prefetchUnused(Addr paddr, PrefetchSourceType pfSource)
+{
+    Base::prefetchUnused(pfSource);
+    if (pfSource == PrefetchSourceType::CDP) {
+        cdp->recordUnusedPrefetch(paddr);
+    }
+}
+
+void
+L2CompositeWithWorkerPrefetcher::addToQueue(std::list<DeferredPacket> &queue, DeferredPacket &dpp)
+{
+    if (&queue == &pfq) {
+        // Check whether the cdp prefetch request needs to be filtered out
+        if (dpp.pkt->req->getXsMetadata().prefetchSource == PrefetchSourceType::CDP) {
+            if (cdp->needFilter(dpp.pkt->req->getPaddr())) {
+                delete dpp.pkt;
+                return;
+            }
+        }
+    }
+    Queued::addToQueue(queue, dpp);
 }
 
 void
@@ -69,9 +94,18 @@ L2CompositeWithWorkerPrefetcher::notify(const PacketPtr &pkt, const PrefetchInfo
 }
 
 void
+L2CompositeWithWorkerPrefetcher::recvCustomInfoFrmUpStream(CustomPfInfo& info)
+{
+    cdp->recvRivalCoverage(info);
+}
+
+void
 L2CompositeWithWorkerPrefetcher::pfHitNotify(float accuracy, PrefetchSourceType pf_source, const PacketPtr &pkt)
 {
-    cdp->pfHitNotify(accuracy, pf_source, pkt, addressGenBuffer);
+    if (enableCDP) {
+        cdp->pfHitNotify(accuracy, pf_source, pkt, addressGenBuffer);
+    }
+
     if (addressGenBuffer.size()) {
         assert(pkt->req->hasVaddr());
         postNotifyInsert(pkt, addressGenBuffer);
@@ -93,7 +127,10 @@ L2CompositeWithWorkerPrefetcher::setParentInfo(System *sys, ProbeManager *pm, Ca
 void
 L2CompositeWithWorkerPrefetcher::notifyFill(const PacketPtr &pkt)
 {
-    cdp->notifyFill(pkt, addressGenBuffer);
+    if (enableCDP) {
+        cdp->notifyFill(pkt, addressGenBuffer);
+    }
+
     if (addressGenBuffer.size()) {
         assert(pkt->req->hasVaddr());
         postNotifyInsert(pkt, addressGenBuffer);

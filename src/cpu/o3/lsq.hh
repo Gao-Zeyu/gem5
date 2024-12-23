@@ -336,8 +336,6 @@ class LSQ
         void addReq(Addr addr, unsigned size,
                 const std::vector<bool>& byte_enable);
 
-        void forward();
-
         /** Destructor.
          * The LSQRequest owns the request. If the packet has already been
          * sent, the sender state will be deleted upon receiving the reply.
@@ -345,6 +343,9 @@ class LSQ
         virtual ~LSQRequest();
 
       public:
+
+        void forward();
+
         /** Convenience getters/setters. */
         /** @{ */
         /** Set up Context numbers. */

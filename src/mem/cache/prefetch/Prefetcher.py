@@ -482,7 +482,50 @@ class CDP(QueuedPrefetcher):
     on_write = False
     on_data  = True
     on_inst  = False
+    enable_coordinate = Param.Bool(False, "enable coordinate throttling or not")
     use_byteorder = Param.Bool(True,"")
+    vpn_sub_entries = Param.Unsigned(4,
+        "Sub entry number of each of vpnEntry")
+    vpn_assoc = Param.Unsigned(4,
+        "Ways of vpnTable")
+    vpn_entries = Param.MemorySize(
+        "16",
+        "num of entries in vpnTable"
+    )
+    vpn_reset_period = Param.Unsigned(128,
+        "reset vpn table after how many accesses")
+    vpn_indexing_policy = Param.BaseIndexingPolicy(
+        SetAssociative(
+            entry_size=1,
+            assoc=Parent.vpn_assoc,
+            size=Parent.vpn_entries),
+        "Indexing policy of vpnTable"
+    )
+    vpn_replacement_policy = Param.BaseReplacementPolicy(
+        LRURP(),
+        "Replacement policy of vpnTable"
+    )
+    filter_table_assoc = Param.Unsigned(256,
+        "Ways of filterTable")
+    filter_table_entries = Param.MemorySize(
+        "256",
+        "num of entries in filterTable"
+    )
+    filter_table_indexing_policy = Param.BaseIndexingPolicy(
+        SetAssociative(
+            entry_size=1,
+            assoc=Parent.filter_table_assoc,
+            size=Parent.filter_table_entries),
+        "Indexing policy of filterTable"
+    )
+    filter_table_replacement_policy = Param.BaseReplacementPolicy(
+        LRURP(),
+        "Replacement policy of filterTable"
+    )
+    filter_entry_region_blks = Param.Unsigned(64,
+        "How many blks a region can track")
+    filter_entry_granularity = Param.Unsigned(4096,
+        "How many bytes a blk in a region can track")
     throttle_aggressiveness = Param.Float(2.0,
         "A parameter to control the aggressiveness of throttling")
 
@@ -1032,7 +1075,7 @@ class L2CompositeWithWorkerPrefetcher(CompositeWithWorkerPrefetcher):
     bop_small = Param.BOPPrefetcher(SmallBOPPrefetcher(is_sub_prefetcher=True),
                                      "Small BOP used in composite prefetcher ")
     enable_bop = Param.Bool(False, "Enable BOP")
-    enable_cdp = Param.Bool(False, "Enable CDP")
+    enable_cdp = Param.Bool(True, "Enable CDP")
     enable_cmc = Param.Bool(False, "Enable CMC")
 
 class L3CompositeWithWorkerPrefetcher(CompositeWithWorkerPrefetcher):
