@@ -615,7 +615,7 @@ DecoupledBPUWithFTB::tick()
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
         tryEnqFetchTarget(1);
-        generateAndSetNewFetchStream();
+        generateAndSetNewFetchStream(1);
         tryEnqFetchStream();
     } else {
         receivedPred = false;
@@ -686,17 +686,39 @@ DecoupledBPUWithFTB::ideal_tick()
         dbpFtbStats.fsqFullCannotEnq++;
     }
 
+    if (squashing) {
+        DPRINTF(TwoTaken && enableTwoTaken, "Begin ideal_tick, squashing = true\n");
+    } else {
+        DPRINTF(TwoTaken && enableTwoTaken, "Begin ideal_tick, squashing = false\n");
+    }
+
 
     int predsRemainsToBeMade = enableTwoTaken ? 2 : 1;
     // in two taken roofline model, we create max(bubblesOfPreds1, bubblesOfPreds2) bubbles
     int tempNumOverrideBubbles = 0;
+
+    //==========================================
+    // if (!squashing) {
+    //     DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
+    //     DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
+    //     tryEnqFetchTarget(1);
+    //     tryEnqFetchStream();
+    // } else {
+    //     receivedPred = false;
+    //     DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+    //     DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+    // }
+
+    // sentPCHist = false;
+    //==========================================
 
     if (numOverrideBubbles > 0) {
         numOverrideBubbles--;
     }
 
     while (predsRemainsToBeMade > 0) {
-        // make one prediction
+
+        //===================================================
         if (!squashing) {
             DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
             DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
@@ -708,8 +730,22 @@ DecoupledBPUWithFTB::ideal_tick()
             DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
         }
 
-
         sentPCHist = false;
+        //===================================================
+
+        if (squashing) {
+            assert(!receivedPred);
+            // set squashing = false, then squash,
+            // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by squash PC
+        } else if (!squashing && receivedPred) {
+            // assert((s0PC == MaxAddr) || (numOverrideBubbles > 0));
+            // cannot make prediction
+            // set squashing = false, then skip putPCHistory,
+            // generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream
+        } else if (!squashing && !receivedPred) {
+            // make predictions
+            // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by last tick finalPred
+        }
 
         if (!receivedPred && !streamQueueFull()) {
             if (!enableLoopBuffer || (enableLoopBuffer && !lb.isActive())) {
@@ -758,7 +794,7 @@ DecoupledBPUWithFTB::ideal_tick()
             tempNumOverrideBubbles = std::max(generateFinalPredAndCreateBubbles(), tempNumOverrideBubbles);
             DPRINTF(TwoTaken && enableTwoTaken, "generateAndSetNewFetchStream(), predsRemainsToBeMade = %d\n",
                     predsRemainsToBeMade);
-            generateAndSetNewFetchStream();
+            generateAndSetNewFetchStream(3 - predsRemainsToBeMade);
             if (!enableTwoTaken) {
                 numOverrideBubbles = tempNumOverrideBubbles;
             } else {
@@ -2125,7 +2161,10 @@ DecoupledBPUWithFTB::tryEnqFetchStream()
     assert(!streamQueueFull());
 
     // enqueue the fetch stream.
-    enqueueFetchStream();
+    enqueueFetchStream(streamToEnqueue);
+    // if (enableTwoTaken) {
+    //     enqueueFetchStream(stream2ToEnqueue);
+    // }
 
     for (int i = 0; i < numStages; i++) {
         predsOfEachStage[i].valid = false;
@@ -2340,8 +2379,9 @@ DecoupledBPUWithFTB::makeLoopPredictions(FetchStream &entry, bool &endLoop, bool
 // this function enqueues fsq and update s0PC and s0History
 // use loop predictor and loop buffer here
 void
-DecoupledBPUWithFTB::generateAndSetNewFetchStream()
+DecoupledBPUWithFTB::generateAndSetNewFetchStream(int pred_id)
 {
+    assert(pred_id == 1 || pred_id == 2);
     assert(!squashing);
     if (!receivedPred) {
         DPRINTF(DecoupleBP, "No received prediction, cannot enq fsq\n");
@@ -2549,24 +2589,30 @@ DecoupledBPUWithFTB::generateAndSetNewFetchStream()
     DPRINTF(LoopBuffer, "now stream before loop:\n");
     printStream(lb.streamBeforeLoop);
 
-    streamToEnqueue = entry;
-    DPRINTF(TwoTaken && enableTwoTaken, "set a stream\n");
+    if (pred_id == 2 && enableTwoTaken){
+        // stream2ToEnqueue = entry;
+        streamToEnqueue = entry;
+        DPRINTF(TwoTaken && enableTwoTaken, "set stream %d\n", pred_id);
+    } else {
+        streamToEnqueue = entry;
+        DPRINTF(TwoTaken && enableTwoTaken, "set stream 1\n");
+    }
 }
 
 
 void
-DecoupledBPUWithFTB::enqueueFetchStream()
+DecoupledBPUWithFTB::enqueueFetchStream(FetchStream stream)
 {
     DPRINTF(TwoTaken && enableTwoTaken, "enqueue a FetchStream into FSQ\n");
 
-    auto [insert_it, inserted] = fetchStreamQueue.emplace(fsqId, streamToEnqueue);
+    auto [insert_it, inserted] = fetchStreamQueue.emplace(fsqId, stream);
     assert(inserted);
 
     dumpFsq("after insert new stream");
     DPRINTF(DecoupleBP || debugFlagOn, "Insert fetch stream %lu\n", fsqId);
 
     fsqId++;
-    printStream(streamToEnqueue);
+    printStream(stream);
 
     dbpFtbStats.fsqEntryEnqueued++;
 }
