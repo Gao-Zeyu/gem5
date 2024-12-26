@@ -698,18 +698,19 @@ DecoupledBPUWithFTB::ideal_tick()
     int tempNumOverrideBubbles = 0;
 
     //==========================================
-    // if (!squashing) {
-    //     DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
-    //     DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-    //     tryEnqFetchTarget(1);
-    //     tryEnqFetchStream();
-    // } else {
-    //     receivedPred = false;
-    //     DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-    //     DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-    // }
+    if (!squashing) {
+        DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
+        DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
+        tryEnqFetchTarget(1);
+        tryEnqFetchTarget(2);
+        tryEnqFetchStream();
+    } else {
+        receivedPred = false;
+        DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+        DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+    }
 
-    // sentPCHist = false;
+    sentPCHist = false;
     //==========================================
 
     if (numOverrideBubbles > 0) {
@@ -719,18 +720,18 @@ DecoupledBPUWithFTB::ideal_tick()
     while (predsRemainsToBeMade > 0) {
 
         //===================================================
-        if (!squashing) {
-            DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
-            DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-            tryEnqFetchTarget(3-predsRemainsToBeMade);
-            tryEnqFetchStream();
-        } else {
-            receivedPred = false;
-            DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-            DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-        }
+        // if (!squashing) {
+        //     DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
+        //     DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
+        //     tryEnqFetchTarget(3-predsRemainsToBeMade);
+        //     tryEnqFetchStream();
+        // } else {
+        //     receivedPred = false;
+        //     DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+        //     DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
+        // }
 
-        sentPCHist = false;
+        // sentPCHist = false;
         //===================================================
 
         if (squashing) {
@@ -800,6 +801,9 @@ DecoupledBPUWithFTB::ideal_tick()
             } else {
                 if (predsRemainsToBeMade == 1) {
                     numOverrideBubbles = tempNumOverrideBubbles;
+                }
+                if (predsRemainsToBeMade == 2) {
+                    receivedPred = false;
                 }
             }
         }
@@ -2162,9 +2166,9 @@ DecoupledBPUWithFTB::tryEnqFetchStream()
 
     // enqueue the fetch stream.
     enqueueFetchStream(streamToEnqueue);
-    // if (enableTwoTaken) {
-    //     enqueueFetchStream(stream2ToEnqueue);
-    // }
+    if (enableTwoTaken) {
+        enqueueFetchStream(stream2ToEnqueue);
+    }
 
     for (int i = 0; i < numStages; i++) {
         predsOfEachStage[i].valid = false;
@@ -2590,8 +2594,8 @@ DecoupledBPUWithFTB::generateAndSetNewFetchStream(int pred_id)
     printStream(lb.streamBeforeLoop);
 
     if (pred_id == 2 && enableTwoTaken){
-        // stream2ToEnqueue = entry;
-        streamToEnqueue = entry;
+        stream2ToEnqueue = entry;
+        // streamToEnqueue = entry;
         DPRINTF(TwoTaken && enableTwoTaken, "set stream %d\n", pred_id);
     } else {
         streamToEnqueue = entry;
