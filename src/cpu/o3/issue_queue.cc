@@ -308,7 +308,7 @@ IssueQue::wakeUpDependents(const DynInstPtr& inst, bool speculative)
         if (dst->isFixedMapping() || dst->getNumPinnedWritesToComplete() != 1) [[unlikely]] {
             continue;
         }
-
+        scheduler->regCache.insert(dst->flatIndex(), {});
         DPRINTF(Schedule, "was %s woken by p%lu [sn:%llu]\n", speculative ? "spec" : "wb", dst->flatIndex(),
                 inst->seqNum);
         for (auto& it : subDepGraph[dst->flatIndex()]) {
@@ -402,6 +402,7 @@ IssueQue::selectInst()
             for (int i = 0; i < inst->numSrcRegs(); i++) {
                 auto src = inst->srcRegIdx(i);
                 PhysRegIdPtr psrc = inst->renamedSrcIdx(i);
+                if (psrc->isFixedMapping()) continue;
                 std::pair<int, int> rfTypePortId;
                 // read port is point to point with srcid
                 if (src.isIntReg() && intRfTypePortId[pi].size() > i) {
@@ -1028,7 +1029,6 @@ Scheduler::writebackWakeup(const DynInstPtr& inst)
             continue;
         }
         scoreboard[dst->flatIndex()] = true;
-        regCache.insert(dst->flatIndex(), {});
     }
     for (auto it : issueQues) {
         it->wakeUpDependents(inst, false);

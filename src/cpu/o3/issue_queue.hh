@@ -236,7 +236,7 @@ class Scheduler : public SimObject
 
     // regcache only for integer
     boost::compute::detail::lru_cache<int, NullStruct> regCache =
-        boost::compute::detail::lru_cache<int, NullStruct>(24);
+        boost::compute::detail::lru_cache<int, NullStruct>(28);
 
     // used for searching dependency chain
     std::stack<DynInstPtr> dfs;
