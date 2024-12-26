@@ -286,7 +286,7 @@ class DecoupledBPUWithFTB : public BPredUnit
 
     void tryEnqFetchStream();
 
-    void tryEnqFetchTarget();
+    void tryEnqFetchTarget(int id);
 
     void enqueueFetchStream();
 

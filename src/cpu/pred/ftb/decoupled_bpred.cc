@@ -13,6 +13,7 @@
 #include "debug/FTBITTAGE.hh"
 #include "debug/JumpAheadPredictor.hh"
 #include "debug/Profiling.hh"
+#include "debug/TwoTaken.hh"
 #include "sim/core.hh"
 
 namespace gem5
@@ -613,7 +614,8 @@ DecoupledBPUWithFTB::tick()
     if (!squashing) {
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-        tryEnqFetchTarget();
+        tryEnqFetchTarget(1);
+        generateAndSetNewFetchStream();
         tryEnqFetchStream();
     } else {
         receivedPred = false;
@@ -698,7 +700,7 @@ DecoupledBPUWithFTB::ideal_tick()
         if (!squashing) {
             DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
             DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-            tryEnqFetchTarget();
+            tryEnqFetchTarget(3-predsRemainsToBeMade);
             tryEnqFetchStream();
         } else {
             receivedPred = false;
@@ -754,6 +756,8 @@ DecoupledBPUWithFTB::ideal_tick()
 
         if (!receivedPred && numOverrideBubbles == 0 && sentPCHist) {
             tempNumOverrideBubbles = std::max(generateFinalPredAndCreateBubbles(), tempNumOverrideBubbles);
+            DPRINTF(TwoTaken && enableTwoTaken, "generateAndSetNewFetchStream(), predsRemainsToBeMade = %d\n",
+                    predsRemainsToBeMade);
             generateAndSetNewFetchStream();
             if (!enableTwoTaken) {
                 numOverrideBubbles = tempNumOverrideBubbles;
@@ -2120,15 +2124,8 @@ DecoupledBPUWithFTB::tryEnqFetchStream()
     }
     assert(!streamQueueFull());
 
-    if (!enableTwoTaken) {
-        // Make new prediction here and enqueue the fetch stream.
-        generateAndSetNewFetchStream();
-        enqueueFetchStream();
-    } else {
-        // The stream entry has been set at the previous ideal_tick(),
-        // so at this point, we only need to enqueue the fetch stream.
-        enqueueFetchStream();
-    }
+    // enqueue the fetch stream.
+    enqueueFetchStream();
 
     for (int i = 0; i < numStages; i++) {
         predsOfEachStage[i].valid = false;
@@ -2165,7 +2162,7 @@ DecoupledBPUWithFTB::setNTEntryWithStream(FtqEntry &ftq_entry, Addr end_pc)
 }
 
 void
-DecoupledBPUWithFTB::tryEnqFetchTarget()
+DecoupledBPUWithFTB::tryEnqFetchTarget(int id)
 {
     DPRINTF(DecoupleBP, "Try to enq fetch target\n");
     if (fetchTargetQueue.full()) {
@@ -2199,14 +2196,15 @@ DecoupledBPUWithFTB::tryEnqFetchTarget()
     DPRINTF(DecoupleBP, "Serve enq PC: %#lx with stream %lu:\n",
             ftq_enq_state.pc, it->first);
     printStream(stream_to_enq);
-    
+
 
     // We does let ftq to goes beyond fsq now
     if (ftq_enq_state.pc > end) {
         warn("FTQ enq PC %#lx is beyond fsq end %#lx\n",
          ftq_enq_state.pc, end);
     }
-    
+    DPRINTF(TwoTaken && enableTwoTaken, "DecoupledBPUWithFTB::tryEnqFetchTarget(%d)\n", id);
+
     assert(ftq_enq_state.pc <= end || (end < predictWidth && (ftq_enq_state.pc + predictWidth < predictWidth)));
 
     // create a new target entry
@@ -2344,6 +2342,24 @@ DecoupledBPUWithFTB::makeLoopPredictions(FetchStream &entry, bool &endLoop, bool
 void
 DecoupledBPUWithFTB::generateAndSetNewFetchStream()
 {
+    assert(!squashing);
+    if (!receivedPred) {
+        DPRINTF(DecoupleBP, "No received prediction, cannot enq fsq\n");
+        DPRINTF(Override, "In generateAndSetNewFetchStream(), received is false.\n");
+        return;
+    } else {
+        DPRINTF(Override, "In generateAndSetNewFetchStream(), received is true.\n");
+    }
+    if (s0PC == MaxAddr) {
+        DPRINTF(DecoupleBP, "s0PC %#lx is insane, cannot make prediction\n", s0PC);
+        return;
+    }
+    // prediction valid, but not ready to enq because of bubbles
+    if (numOverrideBubbles > 0) {
+        DPRINTF(DecoupleBP, "Waiting for bubble caused by overriding, bubbles rest: %u\n", numOverrideBubbles);
+        DPRINTF(Override, "Waiting for bubble caused by overriding, bubbles rest: %u\n", numOverrideBubbles);
+        return;
+    }
     DPRINTF(DecoupleBP, "Try to make new prediction\n");
     FetchStream entry_new;
     auto &entry = entry_new;
@@ -2534,12 +2550,15 @@ DecoupledBPUWithFTB::generateAndSetNewFetchStream()
     printStream(lb.streamBeforeLoop);
 
     streamToEnqueue = entry;
+    DPRINTF(TwoTaken && enableTwoTaken, "set a stream\n");
 }
 
 
 void
 DecoupledBPUWithFTB::enqueueFetchStream()
 {
+    DPRINTF(TwoTaken && enableTwoTaken, "enqueue a FetchStream into FSQ\n");
+
     auto [insert_it, inserted] = fetchStreamQueue.emplace(fsqId, streamToEnqueue);
     assert(inserted);
 
