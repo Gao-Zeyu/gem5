@@ -902,13 +902,14 @@ Scheduler::specWakeUpDependents(const DynInstPtr& inst, IssueQue* from_issue_que
                 from_issue_queue->getName(), to->getName(), wakeDelay);
         if (wakeDelay == 0) {
             to->wakeUpDependents(inst, true);
-            for (int i = 0; i < inst->numDestRegs(); i++) {
-                PhysRegIdPtr dst = inst->renamedDestIdx(i);
-                if (dst->isFixedMapping()) [[unlikely]] {
-                    continue;
-                    ;
+            if (!(inst->isFloating() || inst->isVector())) {
+                for (int i = 0; i < inst->numDestRegs(); i++) {
+                    PhysRegIdPtr dst = inst->renamedDestIdx(i);
+                    if (dst->isFixedMapping()) [[unlikely]] {
+                        continue;
+                    }
+                    earlyScoreboard[dst->flatIndex()] = true;
                 }
-                earlyScoreboard[dst->flatIndex()] = true;
             }
         } else {
             auto wakeEvent = new SpecWakeupCompletion(inst, to);
