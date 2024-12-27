@@ -490,7 +490,7 @@ class Fetch
     bool cacheBlocked;
 
     /** The packet that is waiting to be retried. */
-    PacketPtr retryPkt;
+    std::vector<PacketPtr> retryPkt;
 
     /** The thread that is waiting on the cache to tell fetch to retry. */
     ThreadID retryTid;

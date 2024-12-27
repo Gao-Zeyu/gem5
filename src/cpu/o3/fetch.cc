@@ -97,7 +97,7 @@ Fetch::Fetch(CPU *_cpu, const BaseO3CPUParams &params)
       commitToFetchDelay(params.commitToFetchDelay),
       fetchWidth(params.fetchWidth),
       decodeWidth(params.decodeWidth),
-      retryPkt(NULL),
+      retryPkt(),
       retryTid(InvalidThreadID),
       cacheBlkSize(cpu->cacheLineSize()),
       fetchBufferSize(params.fetchBufferSize),
@@ -556,7 +556,7 @@ void
 Fetch::drainSanityCheck() const
 {
     assert(isDrained());
-    assert(retryPkt == NULL);
+    assert(retryPkt.size() == 0);
     assert(retryTid == InvalidThreadID);
     assert(!cacheBlocked);
     assert(!interruptPending);
@@ -896,8 +896,8 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
 
         // Access the cache.
         if (!icachePort.sendTimingReq(data_pkt)) {
-            assert(retryPkt == NULL);
-            assert(retryTid == InvalidThreadID);
+            //assert(retryPkt == NULL);
+            // assert(retryTid == InvalidThreadID);
             DPRINTF(Fetch, "[tid:%i] Out of MSHRs!\n", tid);
 
             fetchStatus[tid] = IcacheWaitRetry;
@@ -905,7 +905,7 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
             DPRINTF(Fetch, "[tid:%i] mem_req.addr=%#lx needs retry.\n", tid,
                     mem_req->getVaddr());
             setAllFetchStalls(StallReason::IcacheStall);
-            retryPkt = data_pkt;
+            retryPkt.push_back(data_pkt);
             retryTid = tid;
             cacheBlocked = true;
 
@@ -1023,10 +1023,10 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst, const In
     // Get rid of the retrying packet if it was from this thread.
     if (retryTid == tid) {
         assert(cacheBlocked);
-        if (retryPkt) {
-            delete retryPkt;
+        for (auto it : retryPkt) {
+            delete it;
         }
-        retryPkt = NULL;
+        retryPkt.clear();
         retryTid = InvalidThreadID;
     }
 
@@ -1986,24 +1986,31 @@ Fetch::fetch(bool &status_change)
 void
 Fetch::recvReqRetry()
 {
-    if (retryPkt != NULL) {
-        assert(cacheBlocked);
-        assert(retryTid != InvalidThreadID);
-        assert(fetchStatus[retryTid] == IcacheWaitRetry);
-
-        if (icachePort.sendTimingReq(retryPkt)) {
-            fetchStatus[retryTid] = IcacheWaitResponse;
-            // Notify Fetch Request probe when a retryPkt is successfully sent.
-            // Note that notify must be called before retryPkt is set to NULL.
-            ppFetchRequestSent->notify(retryPkt->req);
-            retryPkt = NULL;
-            retryTid = InvalidThreadID;
-            cacheBlocked = false;
-        }
-    } else {
+    if (retryPkt.size() == 0) {
         assert(retryTid == InvalidThreadID);
         // Access has been squashed since it was sent out.  Just clear
         // the cache being blocked.
+        cacheBlocked = false;
+        return;
+    }
+    assert(cacheBlocked);
+    // assert(retryTid != InvalidThreadID);
+    // assert(fetchStatus[retryTid] == IcacheWaitRetry);
+
+    for (auto it = retryPkt.begin(); it != retryPkt.end();) {
+        if (icachePort.sendTimingReq(*it)) {
+            fetchStatus[retryTid] = IcacheWaitResponse;
+            // Notify Fetch Request probe when a retryPkt is successfully sent.
+            // Note that notify must be called before retryPkt is set to NULL.
+            ppFetchRequestSent->notify((*it)->req);
+            it = retryPkt.erase(it);
+        } else {
+            it++;
+        }
+    }
+
+    if (retryPkt.size() == 0) {
+        retryTid = InvalidThreadID;
         cacheBlocked = false;
     }
 }
