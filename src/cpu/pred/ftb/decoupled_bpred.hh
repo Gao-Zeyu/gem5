@@ -287,7 +287,7 @@ class DecoupledBPUWithFTB : public BPredUnit
 
     void tryEnqFetchStream();
 
-    void tryEnqFetchTarget(int id);
+    void tryEnqFetchTarget();
 
     void enqueueFetchStream(FetchStream stream);
 
@@ -361,7 +361,7 @@ class DecoupledBPUWithFTB : public BPredUnit
     int generateFinalPredAndCreateBubbles();
 
     // set new fetch stream from final pred
-    void generateAndSetNewFetchStream(int pred_id);
+    bool generateAndSetNewFetchStream(FetchStream &stream);
 
     // const bool dumpLoopPred;
 

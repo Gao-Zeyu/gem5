@@ -614,8 +614,8 @@ DecoupledBPUWithFTB::tick()
     if (!squashing) {
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-        tryEnqFetchTarget(1);
-        generateAndSetNewFetchStream(1);
+        tryEnqFetchTarget();
+        bool streamValid = generateAndSetNewFetchStream(streamToEnqueue);
         tryEnqFetchStream();
     } else {
         receivedPred = false;
@@ -700,8 +700,7 @@ DecoupledBPUWithFTB::ideal_tick()
     if (!squashing) {
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-        tryEnqFetchTarget(1);
-        tryEnqFetchTarget(2);
+        tryEnqFetchTarget();
         tryEnqFetchStream();
     } else {
         receivedPred = false;
@@ -715,6 +714,10 @@ DecoupledBPUWithFTB::ideal_tick()
         assert(!receivedPred);
         // set squashing = false, then squash,
         // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by squash PC
+        // Due to the squashing, the fetch streams (streamToEnqueue and stream2ToEnqueue)
+        // that are generated in the last cycle will not be enqueued to the FSQ in this cycle.
+        // Instead, these fetch streams will be overwritten by the fetch streams generated in
+        // the current cycle by the generateAndSetNewFetchStream function.
     } else if (!squashing && receivedPred) {
         assert((s0PC == MaxAddr) || (numOverrideBubbles > 0));
         // cannot make prediction
@@ -777,15 +780,21 @@ DecoupledBPUWithFTB::ideal_tick()
             tempNumOverrideBubbles = std::max(generateFinalPredAndCreateBubbles(), tempNumOverrideBubbles);
             DPRINTF(TwoTaken && enableTwoTaken, "generateAndSetNewFetchStream(), predsRemainsToBeMade = %d\n",
                     predsRemainsToBeMade);
-            generateAndSetNewFetchStream(3 - predsRemainsToBeMade);
+
+            bool streamValid = false;
             if (!enableTwoTaken) {
+                bool streamValid = generateAndSetNewFetchStream(streamToEnqueue);
                 numOverrideBubbles = tempNumOverrideBubbles;
             } else {
-                if (predsRemainsToBeMade == 1) {
-                    numOverrideBubbles = tempNumOverrideBubbles;
-                }
+                // need to pred 2nd time, so reset receivedPred here
                 if (predsRemainsToBeMade == 2) {
+                    bool streamValid = generateAndSetNewFetchStream(streamToEnqueue);
+                    DPRINTF(TwoTaken && enableTwoTaken, "try to set stream 1: %s\n", streamValid ? "success" : "fail");
                     receivedPred = false;
+                } else if (predsRemainsToBeMade == 1) {
+                    bool streamValid = generateAndSetNewFetchStream(stream2ToEnqueue);
+                    DPRINTF(TwoTaken && enableTwoTaken, "try to set stream 2: %s\n", streamValid ? "success" : "fail");
+                    numOverrideBubbles = tempNumOverrideBubbles;
                 }
             }
         }
@@ -2187,7 +2196,7 @@ DecoupledBPUWithFTB::setNTEntryWithStream(FtqEntry &ftq_entry, Addr end_pc)
 }
 
 void
-DecoupledBPUWithFTB::tryEnqFetchTarget(int id)
+DecoupledBPUWithFTB::tryEnqFetchTarget()
 {
     DPRINTF(DecoupleBP, "Try to enq fetch target\n");
     if (fetchTargetQueue.full()) {
@@ -2200,86 +2209,95 @@ DecoupledBPUWithFTB::tryEnqFetchTarget(int id)
         DPRINTF(DecoupleBP, "No stream to enter ftq in fetchStreamQueue\n");
         return;
     }
-    // ftq can accept new cache lines,
-    // try to get cache lines from fetchStreamQueue
-    // find current stream with ftqEnqfsqID in fetchStreamQueue
-    auto &ftq_enq_state = fetchTargetQueue.getEnqState();
-    auto it = fetchStreamQueue.find(ftq_enq_state.streamId);
-    if (it == fetchStreamQueue.end()) {
-        dbpFtbStats.fsqNotValid++;
-        // desired stream not found in fsq
-        DPRINTF(DecoupleBP, "FTQ enq desired Stream ID %u is not found\n",
-                ftq_enq_state.streamId);
-        if (streamQueueFull()) {
-            dbpFtbStats.fsqFullFetchHungry++;
+
+    int entrysRemainsToEnq = enableTwoTaken ? 2 : 1;
+
+    while (entrysRemainsToEnq > 0) {
+        // ftq can accept new cache lines,
+        // try to get cache lines from fetchStreamQueue
+        // find current stream with ftqEnqfsqID in fetchStreamQueue
+        auto &ftq_enq_state = fetchTargetQueue.getEnqState();
+        auto it = fetchStreamQueue.find(ftq_enq_state.streamId);
+        if (it == fetchStreamQueue.end()) {
+            dbpFtbStats.fsqNotValid++;
+            // desired stream not found in fsq
+            DPRINTF(DecoupleBP, "FTQ enq desired Stream ID %u is not found\n",
+                    ftq_enq_state.streamId);
+            if (streamQueueFull()) {
+                dbpFtbStats.fsqFullFetchHungry++;
+            }
+            return;
         }
-        return;
-    }
 
-    auto &stream_to_enq = it->second;
-    Addr end = stream_to_enq.predEndPC;
-    DPRINTF(DecoupleBP, "Serve enq PC: %#lx with stream %lu:\n",
-            ftq_enq_state.pc, it->first);
-    printStream(stream_to_enq);
+        auto &stream_to_enq = it->second;
+        Addr end = stream_to_enq.predEndPC;
+        DPRINTF(DecoupleBP, "Serve enq PC: %#lx with stream %lu:\n",
+                ftq_enq_state.pc, it->first);
+        printStream(stream_to_enq);
 
 
-    // We does let ftq to goes beyond fsq now
-    if (ftq_enq_state.pc > end) {
-        warn("FTQ enq PC %#lx is beyond fsq end %#lx\n",
-         ftq_enq_state.pc, end);
-    }
-    DPRINTF(TwoTaken && enableTwoTaken, "DecoupledBPUWithFTB::tryEnqFetchTarget(%d)\n", id);
-
-    assert(ftq_enq_state.pc <= end || (end < predictWidth && (ftq_enq_state.pc + predictWidth < predictWidth)));
-
-    // create a new target entry
-    FtqEntry ftq_entry;
-    ftq_entry.startPC = ftq_enq_state.pc;
-    ftq_entry.fsqID = ftq_enq_state.streamId;
-
-    // set prediction results to ftq entry
-    Addr thisFtqEntryShouldEndPC = end;
-    bool taken = stream_to_enq.getTaken();
-    bool inLoop = stream_to_enq.fromLoopBuffer;
-    bool loopExit = stream_to_enq.isExit;
-    if (enableJumpAheadPredictor) {
-        bool jaHit = stream_to_enq.jaHit;
-        if (jaHit) {
-            int &currentSentBlock = stream_to_enq.currentSentBlock;
-            thisFtqEntryShouldEndPC = stream_to_enq.startPC + (currentSentBlock + 1) * predictWidth;
-            currentSentBlock++;
+        // We does let ftq to goes beyond fsq now
+        if (ftq_enq_state.pc > end) {
+            warn("FTQ enq PC %#lx is beyond fsq end %#lx\n",
+            ftq_enq_state.pc, end);
         }
+        DPRINTF(TwoTaken && enableTwoTaken, "tryEnqFetchTarget, entrysRemainsToEnq = %d\n", entrysRemainsToEnq);
+
+        assert(ftq_enq_state.pc <= end || (end < predictWidth && (ftq_enq_state.pc + predictWidth < predictWidth)));
+
+        // create a new target entry
+        FtqEntry ftq_entry;
+        ftq_entry.startPC = ftq_enq_state.pc;
+        ftq_entry.fsqID = ftq_enq_state.streamId;
+
+        // set prediction results to ftq entry
+        Addr thisFtqEntryShouldEndPC = end;
+        bool taken = stream_to_enq.getTaken();
+        bool inLoop = stream_to_enq.fromLoopBuffer;
+        bool loopExit = stream_to_enq.isExit;
+        if (enableJumpAheadPredictor) {
+            bool jaHit = stream_to_enq.jaHit;
+            if (jaHit) {
+                int &currentSentBlock = stream_to_enq.currentSentBlock;
+                thisFtqEntryShouldEndPC = stream_to_enq.startPC + (currentSentBlock + 1) * predictWidth;
+                currentSentBlock++;
+            }
+        }
+        Addr loopEndPC = stream_to_enq.getBranchInfo().getEnd();
+        if (taken) {
+            setTakenEntryWithStream(stream_to_enq, ftq_entry);
+        } else {
+            setNTEntryWithStream(ftq_entry, thisFtqEntryShouldEndPC);
+        }
+
+        // update ftq_enq_state
+        // if in loop, next pc will either be loop exit or loop start
+        ftq_enq_state.pc = inLoop ?
+            loopExit ? loopEndPC : stream_to_enq.getBranchInfo().target :
+            taken ? stream_to_enq.getBranchInfo().target : thisFtqEntryShouldEndPC;
+
+        // we should not increment streamId to enqueue when ja blocks are not fully consumed
+        if (!(enableJumpAheadPredictor && stream_to_enq.jaHit && stream_to_enq.jaHit &&
+                stream_to_enq.currentSentBlock < stream_to_enq.jaEntry.jumpAheadBlockNum)) {
+            ftq_enq_state.streamId++;
+        }
+        DPRINTF(DecoupleBP,
+                "Update ftqEnqPC to %#lx, FTQ demand stream ID to %lu\n",
+                ftq_enq_state.pc, ftq_enq_state.streamId);
+
+        fetchTargetQueue.enqueue(ftq_entry);
+
+        assert(ftq_enq_state.streamId <= fsqId + 1);
+
+        // DPRINTF(DecoupleBP, "a%s stream, next enqueue target: %lu\n",
+        //         stream_to_enq.getEnded() ? "n ended" : " miss", ftq_enq_state.nextEnqTargetId);
+        printFetchTarget(ftq_entry, "Insert to FTQ");
+        fetchTargetQueue.dump("After insert new entry");
+
+        entrysRemainsToEnq--;
+
     }
-    Addr loopEndPC = stream_to_enq.getBranchInfo().getEnd();
-    if (taken) {
-        setTakenEntryWithStream(stream_to_enq, ftq_entry);
-    } else {
-        setNTEntryWithStream(ftq_entry, thisFtqEntryShouldEndPC);
-    }
 
-    // update ftq_enq_state
-    // if in loop, next pc will either be loop exit or loop start
-    ftq_enq_state.pc = inLoop ?
-        loopExit ? loopEndPC : stream_to_enq.getBranchInfo().target :
-        taken ? stream_to_enq.getBranchInfo().target : thisFtqEntryShouldEndPC;
-    
-    // we should not increment streamId to enqueue when ja blocks are not fully consumed
-    if (!(enableJumpAheadPredictor && stream_to_enq.jaHit && stream_to_enq.jaHit &&
-            stream_to_enq.currentSentBlock < stream_to_enq.jaEntry.jumpAheadBlockNum)) {
-        ftq_enq_state.streamId++;
-    }
-    DPRINTF(DecoupleBP,
-            "Update ftqEnqPC to %#lx, FTQ demand stream ID to %lu\n",
-            ftq_enq_state.pc, ftq_enq_state.streamId);
-
-    fetchTargetQueue.enqueue(ftq_entry);
-
-    assert(ftq_enq_state.streamId <= fsqId + 1);
-
-    // DPRINTF(DecoupleBP, "a%s stream, next enqueue target: %lu\n",
-    //         stream_to_enq.getEnded() ? "n ended" : " miss", ftq_enq_state.nextEnqTargetId);
-    printFetchTarget(ftq_entry, "Insert to FTQ");
-    fetchTargetQueue.dump("After insert new entry");
 }
 
 void
@@ -2364,27 +2382,26 @@ DecoupledBPUWithFTB::makeLoopPredictions(FetchStream &entry, bool &endLoop, bool
 
 // this function enqueues fsq and update s0PC and s0History
 // use loop predictor and loop buffer here
-void
-DecoupledBPUWithFTB::generateAndSetNewFetchStream(int pred_id)
+bool
+DecoupledBPUWithFTB::generateAndSetNewFetchStream(FetchStream &streamToBeSet)
 {
-    assert(pred_id == 1 || pred_id == 2);
     assert(!squashing);
     if (!receivedPred) {
-        DPRINTF(DecoupleBP, "No received prediction, cannot enq fsq\n");
+        DPRINTF(DecoupleBP, "No received prediction, cannot set stream to enq fsq\n");
         DPRINTF(Override, "In generateAndSetNewFetchStream(), received is false.\n");
-        return;
+        return false;
     } else {
         DPRINTF(Override, "In generateAndSetNewFetchStream(), received is true.\n");
     }
     if (s0PC == MaxAddr) {
         DPRINTF(DecoupleBP, "s0PC %#lx is insane, cannot make prediction\n", s0PC);
-        return;
+        return false;
     }
     // prediction valid, but not ready to enq because of bubbles
     if (numOverrideBubbles > 0) {
         DPRINTF(DecoupleBP, "Waiting for bubble caused by overriding, bubbles rest: %u\n", numOverrideBubbles);
         DPRINTF(Override, "Waiting for bubble caused by overriding, bubbles rest: %u\n", numOverrideBubbles);
-        return;
+        return false;
     }
     DPRINTF(DecoupleBP, "Try to make new prediction\n");
     FetchStream entry_new;
@@ -2575,14 +2592,8 @@ DecoupledBPUWithFTB::generateAndSetNewFetchStream(int pred_id)
     DPRINTF(LoopBuffer, "now stream before loop:\n");
     printStream(lb.streamBeforeLoop);
 
-    if (pred_id == 2 && enableTwoTaken){
-        stream2ToEnqueue = entry;
-        // streamToEnqueue = entry;
-        DPRINTF(TwoTaken && enableTwoTaken, "set stream %d\n", pred_id);
-    } else {
-        streamToEnqueue = entry;
-        DPRINTF(TwoTaken && enableTwoTaken, "set stream 1\n");
-    }
+    streamToBeSet = entry;
+    return true;
 }
 
 
