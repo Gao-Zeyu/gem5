@@ -44,7 +44,8 @@ from m5.params import *
 from m5.objects.FuncUnit import *
 
 class IntMisc(FUDesc):
-    opList = [ OpDesc(opClass='No_OpClass') ]
+    opList = [ OpDesc(opClass='No_OpClass'),
+               OpDesc(opClass='VectorConfig') ]
 
 class IntALU(FUDesc):
     opList = [ OpDesc(opClass='IntAlu') ]
@@ -126,8 +127,7 @@ class SIMD_Unit(FUDesc):
                OpDesc(opClass='VectorIntegerReduce'),
                OpDesc(opClass='VectorFloatReduce'),
                OpDesc(opClass='VectorMisc'),
-               OpDesc(opClass='VectorIntegerExtension'),
-               OpDesc(opClass='VectorConfig')]
+               OpDesc(opClass='VectorIntegerExtension')]
 
 class PredALU(FUDesc):
     opList = [ OpDesc(opClass='SimdPredAlu') ]

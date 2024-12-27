@@ -697,7 +697,6 @@ DecoupledBPUWithFTB::ideal_tick()
     // in two taken roofline model, we create max(bubblesOfPreds1, bubblesOfPreds2) bubbles
     int tempNumOverrideBubbles = 0;
 
-    //==========================================
     if (!squashing) {
         DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
         DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
@@ -711,43 +710,26 @@ DecoupledBPUWithFTB::ideal_tick()
     }
 
     sentPCHist = false;
-    //==========================================
+
+    if (squashing) {
+        assert(!receivedPred);
+        // set squashing = false, then squash,
+        // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by squash PC
+    } else if (!squashing && receivedPred) {
+        assert((s0PC == MaxAddr) || (numOverrideBubbles > 0));
+        // cannot make prediction
+        // set squashing = false, then skip putPCHistory,
+        // generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream
+    } else if (!squashing && !receivedPred) {
+        // make predictions
+        // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by last tick finalPred
+    }
 
     if (numOverrideBubbles > 0) {
         numOverrideBubbles--;
     }
 
     while (predsRemainsToBeMade > 0) {
-
-        //===================================================
-        // if (!squashing) {
-        //     DPRINTF(DecoupleBP, "DecoupledBPUWithFTB::tick()\n");
-        //     DPRINTF(Override, "DecoupledBPUWithFTB::tick()\n");
-        //     tryEnqFetchTarget(3-predsRemainsToBeMade);
-        //     tryEnqFetchStream();
-        // } else {
-        //     receivedPred = false;
-        //     DPRINTF(DecoupleBP, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-        //     DPRINTF(Override, "Squashing, skip this cycle, receivedPred is %d.\n", receivedPred);
-        // }
-
-        // sentPCHist = false;
-        //===================================================
-
-        if (squashing) {
-            assert(!receivedPred);
-            // set squashing = false, then squash,
-            // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by squash PC
-        } else if (!squashing && receivedPred) {
-            // assert((s0PC == MaxAddr) || (numOverrideBubbles > 0));
-            // cannot make prediction
-            // set squashing = false, then skip putPCHistory,
-            // generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream
-        } else if (!squashing && !receivedPred) {
-            // make predictions
-            // putPCHistory, generateFinalPredAndCreateBubbles and generateAndSetNewFetchStream by last tick finalPred
-        }
-
         if (!receivedPred && !streamQueueFull()) {
             if (!enableLoopBuffer || (enableLoopBuffer && !lb.isActive())) {
                 if (s0PC == ObservingPC) {
