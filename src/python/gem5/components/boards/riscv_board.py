@@ -270,18 +270,6 @@ class RiscvBoard(AbstractSystemBoard, KernelDiskWorkload):
             node.append(FdtPropertyStrings("device_type", "cpu"))
             node.append(FdtPropertyWords("reg", state.CPUAddrCells(i)))
             node.append(FdtPropertyStrings("mmu-type", "riscv,sv48"))
-            if core.core.isa[0].enable_Zicbom_fs.value:
-                node.append(
-                    FdtPropertyWords(
-                        "riscv,cbom-block-size", self.get_cache_line_size()
-                    )
-                )
-            if core.core.isa[0].enable_Zicboz_fs.value:
-                node.append(
-                    FdtPropertyWords(
-                        "riscv,cboz-block-size", self.get_cache_line_size()
-                    )
-                )
             node.append(FdtPropertyStrings("status", "okay"))
             node.append(FdtPropertyStrings("riscv,isa", "rv64imafdc"))
             # TODO: Should probably get this from the core.
