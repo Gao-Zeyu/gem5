@@ -468,10 +468,10 @@ decode QUADRANT default Unknown::unknown() {
                         ra = rvSext(NPC);
                         NPC = rvZext(Rc1 & (~0x1));
                     }}, IsIndirectControl, IsUncondControl, IsCall);
-                    default: CompressedROp::c_add({{
-                        Rc1_sd = Rc1_sd + Rc2_sd;
-                    }});
                 }
+                default: CompressedROp::c_add({{
+                    Rc1_sd = Rc1_sd + Rc2_sd;
+                }});
             }
         }
         format CompressedStore {
